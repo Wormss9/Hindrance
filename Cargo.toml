@@ -1,0 +1,7 @@
+[package]
+name = "Hindrance"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bevy = { version = "0.18.x", default-features = false, features = ["2d"] }
