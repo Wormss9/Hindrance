@@ -1,8 +1,12 @@
-pub struct Grid {
-    grid: Vec<Vec<usize>>,
-}
 pub struct Edges {
+    size: usize,
+    shape: Shape,
     pub edges: Vec<Vec<usize>>,
+}
+
+enum Shape {
+    Square,
+    Triangle,
 }
 
 impl Edges {
@@ -28,7 +32,11 @@ impl Edges {
                 }
             }
         }
-        Self { edges }
+        Self {
+            edges,
+            size,
+            shape: Shape::Square,
+        }
     }
     pub fn triangle_hex(size: usize) -> Self {
         let max = 6 * size * size;
@@ -65,7 +73,11 @@ impl Edges {
                 }
             }
         }
-        Self { edges }
+        Self {
+            edges,
+            size,
+            shape: Shape::Triangle,
+        }
     }
 }
 

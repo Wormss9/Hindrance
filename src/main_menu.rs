@@ -1,10 +1,10 @@
 use bevy::{
-    asset::RenderAssetUsages,
     core_pipeline::tonemapping::{DebandDither, Tonemapping},
-    mesh::{Indices, PrimitiveTopology},
     post_process::bloom::Bloom,
     prelude::*,
 };
+
+use crate::user_interface::{ColorPalette, HiglightInteraction, arrow_right_mesh, cross_mesh};
 
 pub struct MainMenuPlugin;
 
@@ -18,7 +18,7 @@ impl Plugin for MainMenuPlugin {
 }
 
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash, Default)]
-enum GameState {
+pub enum GameState {
     #[default]
     MainMenu,
     Square,
@@ -28,33 +28,6 @@ enum GameState {
 #[derive(Resource)]
 struct MainMenuData {
     main_menu_entity: Entity,
-}
-
-struct ColorPalette {
-    normal: Handle<ColorMaterial>,
-    light: Handle<ColorMaterial>,
-    dark: Handle<ColorMaterial>,
-}
-impl ColorPalette {
-    pub fn new(materials: &mut ResMut<Assets<ColorMaterial>>, base: Color, luminance: f32) -> Self {
-        Self {
-            normal: materials.add(base.with_luminance(luminance)),
-            light: materials.add(base.with_luminance(luminance * 1.5)),
-            dark: materials.add(base.with_luminance(luminance / 1.5)),
-        }
-    }
-    pub fn new_manual(
-        materials: &mut ResMut<Assets<ColorMaterial>>,
-        normal: Color,
-        light: Color,
-        dark: Color,
-    ) -> Self {
-        Self {
-            normal: materials.add(normal),
-            light: materials.add(light),
-            dark: materials.add(dark),
-        }
-    }
 }
 
 pub fn add_camera(mut commands: Commands) {
@@ -68,8 +41,8 @@ pub fn add_camera(mut commands: Commands) {
         Bloom {
             intensity: 0.25,
             ..Default::default()
-        }, // 2. Enable bloom for the camera
-        DebandDither::Enabled, // Optional: bloom causes gradients which cause banding,
+        },
+        DebandDither::Enabled,
     ));
 }
 pub fn setup_main_menu(
@@ -88,7 +61,7 @@ pub fn setup_main_menu(
             parent
                 .spawn((
                     Mesh2d(meshes.add(Rectangle::new(32.0, 32.0))),
-                    MeshMaterial2d(purple.normal.clone()),
+                    MeshMaterial2d(purple.get_color()),
                     Transform::from_translation(Vec3::new(0., 150., 0.)),
                     Pickable::default(),
                 ))
@@ -101,7 +74,7 @@ pub fn setup_main_menu(
             parent
                 .spawn((
                     Mesh2d(meshes.add(RegularPolygon::new(16.0, 3))),
-                    MeshMaterial2d(green.normal.clone()),
+                    MeshMaterial2d(green.get_color()),
                     Transform::from_translation(Vec3::new(0., 50., 0.)),
                     Pickable::default(),
                 ))
@@ -115,14 +88,14 @@ pub fn setup_main_menu(
                 .spawn((
                     Mesh2d(meshes.add(arrow_right_mesh(32.0))),
                     Transform::from_translation(Vec3::new(0., -50., 0.)),
-                    MeshMaterial2d(yellow.normal.clone()),
+                    MeshMaterial2d(yellow.get_color()),
                     Pickable::default(),
                 ))
                 .with_button_colors(&yellow);
             parent
                 .spawn((
                     Mesh2d(meshes.add(cross_mesh(32.0))),
-                    MeshMaterial2d(red.normal.clone()),
+                    MeshMaterial2d(red.get_color()),
                     Transform {
                         translation: Vec3::new(0.0, -150.0, 0.0),
                         rotation: Quat::from_rotation_z(std::f32::consts::FRAC_PI_4),
@@ -144,91 +117,4 @@ pub fn setup_main_menu(
 
 fn cleanup_main_menu(mut commands: Commands, menu_data: Res<MainMenuData>) {
     commands.entity(menu_data.main_menu_entity).despawn();
-}
-
-fn update_material_on<E: EntityEvent>(
-    new_material: Handle<ColorMaterial>,
-) -> impl Fn(On<E>, Query<&mut MeshMaterial2d<ColorMaterial>>) {
-    move |event, mut query| {
-        if let Ok(mut material) = query.get_mut(event.event_target()) {
-            material.0 = new_material.clone();
-        }
-    }
-}
-
-fn cross_mesh(width: f32) -> Mesh {
-    let positions = vec![
-        [-width / 8., -width / 2., 0.],
-        [width / 8., -width / 2., 0.],
-        [width / 8., width / 2., 0.],
-        [-width / 8., width / 2., 0.],
-        [-width / 2., -width / 8., 0.],
-        [width / 2., -width / 8., 0.],
-        [width / 2., width / 8., 0.],
-        [-width / 2., width / 8., 0.],
-    ];
-
-    let indices = vec![0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7];
-
-    let mut mesh = Mesh::new(
-        PrimitiveTopology::TriangleList,
-        RenderAssetUsages::default(),
-    );
-
-    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0.0, 0.0, 1.0]; 8]);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, vec![[0.0, 0.0]; 8]);
-    mesh.insert_indices(Indices::U32(indices));
-
-    mesh
-}
-fn arrow_right_mesh(width: f32) -> Mesh {
-    let half_height = width / 4.0;
-    let shaft_length = width / 2.0;
-    let tip_x = width / 2.0;
-
-    let positions = vec![
-        // Shaft rectangle
-        [-shaft_length, -half_height, 0.0],
-        [0.0, -half_height, 0.0],
-        [0.0, half_height, 0.0],
-        [-shaft_length, half_height, 0.0],
-        // Arrow head
-        [0.0, -width / 2.0, 0.0],
-        [tip_x, 0.0, 0.0],
-        [0.0, width / 2.0, 0.0],
-    ];
-
-    let indices = vec![
-        // Shaft
-        0, 1, 2, 0, 2, 3, // Head
-        4, 5, 6,
-    ];
-
-    let mut mesh = Mesh::new(
-        PrimitiveTopology::TriangleList,
-        RenderAssetUsages::default(),
-    );
-
-    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0.0, 0.0, 1.0]; 7]);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, vec![[0.0, 0.0]; 7]);
-    mesh.insert_indices(Indices::U32(indices));
-
-    mesh
-}
-
-trait ButtonHoverExt {
-    fn with_button_colors(&mut self, color: &ColorPalette) -> &mut Self;
-}
-
-impl<'w> ButtonHoverExt for EntityCommands<'w> {
-    fn with_button_colors(&mut self, color: &ColorPalette) -> &mut Self {
-        self.observe(update_material_on::<Pointer<Over>>(color.light.clone()))
-            .observe(update_material_on::<Pointer<Out>>(color.normal.clone()))
-            .observe(update_material_on::<Pointer<Press>>(color.dark.clone()))
-            .observe(update_material_on::<Pointer<Release>>(color.light.clone()));
-
-        self
-    }
 }
