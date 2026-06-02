@@ -6,6 +6,30 @@ use bevy::{
     prelude::*,
 };
 
+pub struct MainMenuPlugin;
+
+impl Plugin for MainMenuPlugin {
+    fn build(&self, app: &mut App) {
+        app.init_state::<GameState>()
+            .add_systems(Startup, add_camera)
+            .add_systems(OnEnter(GameState::MainMenu), setup_main_menu)
+            .add_systems(OnExit(GameState::MainMenu), cleanup_main_menu);
+    }
+}
+
+#[derive(States, Debug, Clone, PartialEq, Eq, Hash, Default)]
+enum GameState {
+    #[default]
+    MainMenu,
+    Square,
+    Triangle,
+}
+
+#[derive(Resource)]
+struct MainMenuData {
+    main_menu_entity: Entity,
+}
+
 struct ColorPalette {
     normal: Handle<ColorMaterial>,
     light: Handle<ColorMaterial>,
@@ -15,8 +39,8 @@ impl ColorPalette {
     pub fn new(materials: &mut ResMut<Assets<ColorMaterial>>, base: Color, luminance: f32) -> Self {
         Self {
             normal: materials.add(base.with_luminance(luminance)),
-            light: materials.add(base.with_luminance(luminance * 1.2)),
-            dark: materials.add(base.with_luminance(luminance * 0.8)),
+            light: materials.add(base.with_luminance(luminance * 1.5)),
+            dark: materials.add(base.with_luminance(luminance / 1.5)),
         }
     }
     pub fn new_manual(
@@ -33,16 +57,7 @@ impl ColorPalette {
     }
 }
 
-pub fn main_menu(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-) {
-    let purple = ColorPalette::new(&mut materials, Color::srgb(0.7, 0.5, 1.0), 0.5);
-    let green = ColorPalette::new(&mut materials, Color::srgb(0.5, 1.0, 0.5), 0.5);
-    let yellow = ColorPalette::new(&mut materials, Color::srgb(0.8, 0.8, 0.0), 0.5);
-    let red = ColorPalette::new(&mut materials, Color::srgb(1.0, 0.5, 0.5), 0.5);
-
+pub fn add_camera(mut commands: Commands) {
     commands.spawn((
         Camera2d,
         Camera {
@@ -56,51 +71,69 @@ pub fn main_menu(
         }, // 2. Enable bloom for the camera
         DebandDither::Enabled, // Optional: bloom causes gradients which cause banding,
     ));
+}
+pub fn setup_main_menu(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
+    let purple = ColorPalette::new(&mut materials, Color::srgb(0.7, 0.5, 1.0), 0.5);
+    let green = ColorPalette::new(&mut materials, Color::srgb(0.5, 1.0, 0.5), 0.5);
+    let yellow = ColorPalette::new(&mut materials, Color::srgb(0.8, 0.8, 0.0), 0.5);
+    let red = ColorPalette::new(&mut materials, Color::srgb(1.0, 0.5, 0.5), 0.5);
 
-    commands
-        .spawn((
-            Mesh2d(meshes.add(Rectangle::new(32.0, 32.0))),
-            MeshMaterial2d(purple.normal.clone()),
-            Transform::from_translation(Vec3::new(0., 150., 0.)),
-            Pickable::default(),
-        ))
-        .with_button_colors(&purple);
+    let main_menu_entity = commands
+        .spawn((Transform::default(), Visibility::Visible))
+        .with_children(|parent| {
+            parent
+                .spawn((
+                    Mesh2d(meshes.add(Rectangle::new(32.0, 32.0))),
+                    MeshMaterial2d(purple.normal.clone()),
+                    Transform::from_translation(Vec3::new(0., 150., 0.)),
+                    Pickable::default(),
+                ))
+                .with_button_colors(&purple);
+            parent
+                .spawn((
+                    Mesh2d(meshes.add(RegularPolygon::new(16.0, 3))),
+                    MeshMaterial2d(green.normal.clone()),
+                    Transform::from_translation(Vec3::new(0., 50., 0.)),
+                    Pickable::default(),
+                ))
+                .with_button_colors(&green);
+            parent
+                .spawn((
+                    Mesh2d(meshes.add(arrow_right_mesh(32.0))),
+                    Transform::from_translation(Vec3::new(0., -50., 0.)),
+                    MeshMaterial2d(yellow.normal.clone()),
+                    Pickable::default(),
+                ))
+                .with_button_colors(&yellow);
+            parent
+                .spawn((
+                    Mesh2d(meshes.add(cross_mesh(32.0))),
+                    MeshMaterial2d(red.normal.clone()),
+                    Transform {
+                        translation: Vec3::new(0.0, -150.0, 0.0),
+                        rotation: Quat::from_rotation_z(std::f32::consts::FRAC_PI_4),
+                        ..default()
+                    },
+                    Pickable::default(),
+                ))
+                .with_button_colors(&red)
+                .observe(
+                    |_: On<Pointer<Release>>, mut exit: MessageWriter<AppExit>| {
+                        exit.write(AppExit::Success);
+                    },
+                );
+        })
+        .id();
 
-    commands
-        .spawn((
-            Mesh2d(meshes.add(RegularPolygon::new(16.0, 3))),
-            MeshMaterial2d(green.normal.clone()),
-            Transform::from_translation(Vec3::new(0., 50., 0.)),
-            Pickable::default(),
-        ))
-        .with_button_colors(&green);
+    commands.insert_resource(MainMenuData { main_menu_entity });
+}
 
-    commands
-        .spawn((
-            Mesh2d(meshes.add(arrow_right_mesh(32.0))),
-            Transform::from_translation(Vec3::new(0., -50., 0.)),
-            MeshMaterial2d(yellow.normal.clone()),
-            Pickable::default(),
-        ))
-        .with_button_colors(&yellow);
-
-    commands
-        .spawn((
-            Mesh2d(meshes.add(cross_mesh(32.0))),
-            MeshMaterial2d(red.normal.clone()),
-            Transform {
-                translation: Vec3::new(0.0, -150.0, 0.0),
-                rotation: Quat::from_rotation_z(std::f32::consts::FRAC_PI_4),
-                ..default()
-            },
-            Pickable::default(),
-        ))
-        .with_button_colors(&red)
-        .observe(
-            |_: On<Pointer<Release>>, mut exit: MessageWriter<AppExit>| {
-                exit.write(AppExit::Success);
-            },
-        );
+fn cleanup_main_menu(mut commands: Commands, menu_data: Res<MainMenuData>) {
+    commands.entity(menu_data.main_menu_entity).despawn();
 }
 
 fn update_material_on<E: EntityEvent>(
@@ -176,11 +209,11 @@ fn arrow_right_mesh(width: f32) -> Mesh {
 }
 
 trait ButtonHoverExt {
-    fn with_button_colors(self, color: &ColorPalette) -> Self;
+    fn with_button_colors(&mut self, color: &ColorPalette) -> &mut Self;
 }
 
 impl<'w> ButtonHoverExt for EntityCommands<'w> {
-    fn with_button_colors(mut self, color: &ColorPalette) -> Self {
+    fn with_button_colors(&mut self, color: &ColorPalette) -> &mut Self {
         self.observe(update_material_on::<Pointer<Over>>(color.light.clone()))
             .observe(update_material_on::<Pointer<Out>>(color.normal.clone()))
             .observe(update_material_on::<Pointer<Press>>(color.dark.clone()))
