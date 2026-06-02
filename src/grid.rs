@@ -54,13 +54,11 @@ impl Edges {
                             {
                                 edges[current].push(top);
                             }
-                        } else {
-                            if y < size * 2
-                                && let Some(bottom) =
-                                    get_id(if y < size { x - 1 } else { x + 1 }, y + 1, size)
-                            {
-                                edges[current].push(bottom);
-                            }
+                        } else if y < size * 2
+                            && let Some(bottom) =
+                                get_id(if y < size { x - 1 } else { x + 1 }, y + 1, size)
+                        {
+                            edges[current].push(bottom);
                         }
                     }
                     None => continue,
