@@ -92,7 +92,12 @@ pub fn setup_main_menu(
                     Transform::from_translation(Vec3::new(0., 150., 0.)),
                     Pickable::default(),
                 ))
-                .with_button_colors(&purple);
+                .with_button_colors(&purple)
+                .observe(
+                    |_: On<Pointer<Release>>, mut next_state: ResMut<NextState<GameState>>| {
+                        next_state.set(GameState::Square);
+                    },
+                );
             parent
                 .spawn((
                     Mesh2d(meshes.add(RegularPolygon::new(16.0, 3))),
@@ -100,7 +105,12 @@ pub fn setup_main_menu(
                     Transform::from_translation(Vec3::new(0., 50., 0.)),
                     Pickable::default(),
                 ))
-                .with_button_colors(&green);
+                .with_button_colors(&green)
+                .observe(
+                    |_: On<Pointer<Release>>, mut next_state: ResMut<NextState<GameState>>| {
+                        next_state.set(GameState::Triangle);
+                    },
+                );
             parent
                 .spawn((
                     Mesh2d(meshes.add(arrow_right_mesh(32.0))),
