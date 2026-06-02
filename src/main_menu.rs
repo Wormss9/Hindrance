@@ -6,26 +6,55 @@ use bevy::{
     prelude::*,
 };
 
+struct ColorPalette {
+    normal: Handle<ColorMaterial>,
+    light: Handle<ColorMaterial>,
+    dark: Handle<ColorMaterial>,
+}
+impl ColorPalette {
+    pub fn new(
+        materials: &mut ResMut<Assets<ColorMaterial>>,
+        normal: Color,
+        light: Color,
+        dark: Color,
+    ) -> Self {
+        Self {
+            normal: materials.add(normal),
+            light: materials.add(light),
+            dark: materials.add(dark),
+        }
+    }
+}
+
 pub fn main_menu(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    let purple = materials.add(Color::srgb(0.7, 0.5, 1.0));
-    let light_purple = materials.add(Color::srgb(0.9, 0.8, 1.0));
-    let dark_purple = materials.add(Color::srgb(0.5, 0.0, 1.0));
-
-    let green = materials.add(Color::srgb(0.5, 1.0, 0.5));
-    let light_green = materials.add(Color::srgb(0.8, 1.0, 0.8));
-    let dark_green = materials.add(Color::srgb(0.3, 0.8, 0.3));
-
-    let red = materials.add(Color::srgb(1.0, 0.5, 0.5));
-    let light_red = materials.add(Color::srgb(1.0, 0.8, 0.8));
-    let dark_red = materials.add(Color::srgb(0.8, 0.3, 0.3));
-
-    let yellow = materials.add(Color::srgb(0.8, 0.8, 0.0));
-    let light_yellow = materials.add(Color::srgb(1.0, 1.0, 0.0));
-    let dark_yellow = materials.add(Color::srgb(0.5, 0.5, 0.0));
+    let purple = ColorPalette::new(
+        &mut materials,
+        Color::srgb(0.7, 0.5, 1.0),
+        Color::srgb(0.9, 0.8, 1.0),
+        Color::srgb(0.5, 0.0, 1.0),
+    );
+    let green = ColorPalette::new(
+        &mut materials,
+        Color::srgb(0.5, 1.0, 0.5),
+        Color::srgb(0.8, 1.0, 0.8),
+        Color::srgb(0.3, 0.8, 0.3),
+    );
+    let yellow = ColorPalette::new(
+        &mut materials,
+        Color::srgb(0.8, 0.8, 0.0),
+        Color::srgb(1.0, 1.0, 0.0),
+        Color::srgb(0.5, 0.5, 0.0),
+    );
+    let red = ColorPalette::new(
+        &mut materials,
+        Color::srgb(1.0, 0.5, 0.5),
+        Color::srgb(1.0, 0.8, 0.8),
+        Color::srgb(0.8, 0.3, 0.3),
+    );
 
     commands.spawn((
         Camera2d,
@@ -44,43 +73,34 @@ pub fn main_menu(
     commands
         .spawn((
             Mesh2d(meshes.add(Rectangle::new(32.0, 32.0))),
-            MeshMaterial2d(purple.clone()),
+            MeshMaterial2d(purple.normal.clone()),
             Transform::from_translation(Vec3::new(0., 150., 0.)),
             Pickable::default(),
         ))
-        .observe(update_material_on::<Pointer<Over>>(light_purple.clone()))
-        .observe(update_material_on::<Pointer<Out>>(purple.clone()))
-        .observe(update_material_on::<Pointer<Press>>(dark_purple.clone()))
-        .observe(update_material_on::<Pointer<Release>>(light_purple.clone()));
+        .with_button_colors(&purple);
 
     commands
         .spawn((
             Mesh2d(meshes.add(RegularPolygon::new(16.0, 3))),
-            MeshMaterial2d(green.clone()),
+            MeshMaterial2d(green.normal.clone()),
             Transform::from_translation(Vec3::new(0., 50., 0.)),
             Pickable::default(),
         ))
-        .observe(update_material_on::<Pointer<Over>>(light_green.clone()))
-        .observe(update_material_on::<Pointer<Out>>(green.clone()))
-        .observe(update_material_on::<Pointer<Press>>(dark_green.clone()))
-        .observe(update_material_on::<Pointer<Release>>(light_green.clone()));
+        .with_button_colors(&green);
 
     commands
         .spawn((
             Mesh2d(meshes.add(arrow_right_mesh(32.0))),
             Transform::from_translation(Vec3::new(0., -50., 0.)),
-            MeshMaterial2d(yellow.clone()),
+            MeshMaterial2d(yellow.normal.clone()),
             Pickable::default(),
         ))
-        .observe(update_material_on::<Pointer<Over>>(light_yellow.clone()))
-        .observe(update_material_on::<Pointer<Out>>(yellow.clone()))
-        .observe(update_material_on::<Pointer<Press>>(dark_yellow.clone()))
-        .observe(update_material_on::<Pointer<Release>>(light_yellow.clone()));
+        .with_button_colors(&yellow);
 
     commands
         .spawn((
             Mesh2d(meshes.add(cross_mesh(32.0))),
-            MeshMaterial2d(red.clone()),
+            MeshMaterial2d(red.normal.clone()),
             Transform {
                 translation: Vec3::new(0.0, -150.0, 0.0),
                 rotation: Quat::from_rotation_z(std::f32::consts::FRAC_PI_4),
@@ -88,10 +108,12 @@ pub fn main_menu(
             },
             Pickable::default(),
         ))
-        .observe(update_material_on::<Pointer<Over>>(light_red.clone()))
-        .observe(update_material_on::<Pointer<Out>>(red.clone()))
-        .observe(update_material_on::<Pointer<Press>>(dark_red.clone()))
-        .observe(update_material_on::<Pointer<Release>>(light_red.clone()));
+        .with_button_colors(&red)
+        .observe(
+            |_: On<Pointer<Release>>, mut exit: MessageWriter<AppExit>| {
+                exit.write(AppExit::Success);
+            },
+        );
 }
 
 fn update_material_on<E: EntityEvent>(
@@ -164,4 +186,19 @@ fn arrow_right_mesh(width: f32) -> Mesh {
     mesh.insert_indices(Indices::U32(indices));
 
     mesh
+}
+
+trait ButtonHoverExt {
+    fn with_button_colors(self, color: &ColorPalette) -> Self;
+}
+
+impl<'w> ButtonHoverExt for EntityCommands<'w> {
+    fn with_button_colors(mut self, color: &ColorPalette) -> Self {
+        self.observe(update_material_on::<Pointer<Over>>(color.light.clone()))
+            .observe(update_material_on::<Pointer<Out>>(color.normal.clone()))
+            .observe(update_material_on::<Pointer<Press>>(color.dark.clone()))
+            .observe(update_material_on::<Pointer<Release>>(color.light.clone()));
+
+        self
+    }
 }
