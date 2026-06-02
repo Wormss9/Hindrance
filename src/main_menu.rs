@@ -23,6 +23,10 @@ pub fn main_menu(
     let light_red = materials.add(Color::srgb(1.0, 0.8, 0.8));
     let dark_red = materials.add(Color::srgb(0.8, 0.3, 0.3));
 
+    let yellow = materials.add(Color::srgb(0.8, 0.8, 0.0));
+    let light_yellow = materials.add(Color::srgb(1.0, 1.0, 0.0));
+    let dark_yellow = materials.add(Color::srgb(0.5, 0.5, 0.0));
+
     commands.spawn((
         Camera2d,
         Camera {
@@ -41,7 +45,7 @@ pub fn main_menu(
         .spawn((
             Mesh2d(meshes.add(Rectangle::new(32.0, 32.0))),
             MeshMaterial2d(purple.clone()),
-            Transform::from_translation(Vec3::new(0., 100., 0.)),
+            Transform::from_translation(Vec3::new(0., 150., 0.)),
             Pickable::default(),
         ))
         .observe(update_material_on::<Pointer<Over>>(light_purple.clone()))
@@ -53,6 +57,7 @@ pub fn main_menu(
         .spawn((
             Mesh2d(meshes.add(RegularPolygon::new(16.0, 3))),
             MeshMaterial2d(green.clone()),
+            Transform::from_translation(Vec3::new(0., 50., 0.)),
             Pickable::default(),
         ))
         .observe(update_material_on::<Pointer<Over>>(light_green.clone()))
@@ -62,10 +67,22 @@ pub fn main_menu(
 
     commands
         .spawn((
+            Mesh2d(meshes.add(arrow_right_mesh(32.0))),
+            Transform::from_translation(Vec3::new(0., -50., 0.)),
+            MeshMaterial2d(yellow.clone()),
+            Pickable::default(),
+        ))
+        .observe(update_material_on::<Pointer<Over>>(light_yellow.clone()))
+        .observe(update_material_on::<Pointer<Out>>(yellow.clone()))
+        .observe(update_material_on::<Pointer<Press>>(dark_yellow.clone()))
+        .observe(update_material_on::<Pointer<Release>>(light_yellow.clone()));
+
+    commands
+        .spawn((
             Mesh2d(meshes.add(cross_mesh(32.0))),
             MeshMaterial2d(red.clone()),
             Transform {
-                translation: Vec3::new(0.0, -100.0, 0.0),
+                translation: Vec3::new(0.0, -150.0, 0.0),
                 rotation: Quat::from_rotation_z(std::f32::consts::FRAC_PI_4),
                 ..default()
             },
@@ -89,35 +106,51 @@ fn update_material_on<E: EntityEvent>(
 
 fn cross_mesh(width: f32) -> Mesh {
     let positions = vec![
-        [-width / 8., -width / 8., 0.0], // 0
-        [width / 8., -width / 8., 0.0],  // 1
-        [width / 8., width / 8., 0.0],   // 2
-        [-width / 8., width / 8., 0.0],  // 3
-        // top arm
-        [-width / 8., width / 8., 0.0], // 4
-        [width / 8., width / 8., 0.0],  // 5
-        [width / 8., width / 2., 0.0],  // 6
-        [-width / 8., width / 2., 0.0], // 7
-        // bottom arm
-        [-width / 8., -width / 2., 0.0], // 8
-        [width / 8., -width / 2., 0.0],  // 9
-        [width / 8., -width / 8., 0.0],  // 10
-        [-width / 8., -width / 8., 0.0], // 11
-        // left arm
-        [-width / 2., -width / 8., 0.0], // 12
-        [-width / 8., -width / 8., 0.0], // 13
-        [-width / 8., width / 8., 0.0],  // 14
-        [-width / 2., width / 8., 0.0],  // 15
-        // right arm
-        [width / 8., -width / 8., 0.0], // 16
-        [width / 2., -width / 8., 0.0], // 17
-        [width / 2., width / 8., 0.0],  // 18
-        [width / 8., width / 8., 0.0],  // 19
+        [-width / 8., -width / 2., 0.],
+        [width / 8., -width / 2., 0.],
+        [width / 8., width / 2., 0.],
+        [-width / 8., width / 2., 0.],
+        [-width / 2., -width / 8., 0.],
+        [width / 2., -width / 8., 0.],
+        [width / 2., width / 8., 0.],
+        [-width / 2., width / 8., 0.],
+    ];
+
+    let indices = vec![0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7];
+
+    let mut mesh = Mesh::new(
+        PrimitiveTopology::TriangleList,
+        RenderAssetUsages::default(),
+    );
+
+    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0.0, 0.0, 1.0]; 8]);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, vec![[0.0, 0.0]; 8]);
+    mesh.insert_indices(Indices::U32(indices));
+
+    mesh
+}
+fn arrow_right_mesh(width: f32) -> Mesh {
+    let half_height = width / 4.0;
+    let shaft_length = width / 2.0;
+    let tip_x = width / 2.0;
+
+    let positions = vec![
+        // Shaft rectangle
+        [-shaft_length, -half_height, 0.0],
+        [0.0, -half_height, 0.0],
+        [0.0, half_height, 0.0],
+        [-shaft_length, half_height, 0.0],
+        // Arrow head
+        [0.0, -width / 2.0, 0.0],
+        [tip_x, 0.0, 0.0],
+        [0.0, width / 2.0, 0.0],
     ];
 
     let indices = vec![
-        0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 8, 9, 10, 8, 10, 11, 12, 13, 14, 12, 14, 15, 16, 17,
-        18, 16, 18, 19,
+        // Shaft
+        0, 1, 2, 0, 2, 3, // Head
+        4, 5, 6,
     ];
 
     let mut mesh = Mesh::new(
@@ -126,8 +159,8 @@ fn cross_mesh(width: f32) -> Mesh {
     );
 
     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0.0, 0.0, 1.0]; 20]);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, vec![[0.0, 0.0]; 20]);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0.0, 0.0, 1.0]; 7]);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, vec![[0.0, 0.0]; 7]);
     mesh.insert_indices(Indices::U32(indices));
 
     mesh
