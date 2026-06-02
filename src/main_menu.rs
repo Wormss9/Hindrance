@@ -12,7 +12,14 @@ struct ColorPalette {
     dark: Handle<ColorMaterial>,
 }
 impl ColorPalette {
-    pub fn new(
+    pub fn new(materials: &mut ResMut<Assets<ColorMaterial>>, base: Color, luminance: f32) -> Self {
+        Self {
+            normal: materials.add(base.with_luminance(luminance)),
+            light: materials.add(base.with_luminance(luminance * 1.2)),
+            dark: materials.add(base.with_luminance(luminance * 0.8)),
+        }
+    }
+    pub fn new_manual(
         materials: &mut ResMut<Assets<ColorMaterial>>,
         normal: Color,
         light: Color,
@@ -31,30 +38,10 @@ pub fn main_menu(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    let purple = ColorPalette::new(
-        &mut materials,
-        Color::srgb(0.7, 0.5, 1.0),
-        Color::srgb(0.9, 0.8, 1.0),
-        Color::srgb(0.5, 0.0, 1.0),
-    );
-    let green = ColorPalette::new(
-        &mut materials,
-        Color::srgb(0.5, 1.0, 0.5),
-        Color::srgb(0.8, 1.0, 0.8),
-        Color::srgb(0.3, 0.8, 0.3),
-    );
-    let yellow = ColorPalette::new(
-        &mut materials,
-        Color::srgb(0.8, 0.8, 0.0),
-        Color::srgb(1.0, 1.0, 0.0),
-        Color::srgb(0.5, 0.5, 0.0),
-    );
-    let red = ColorPalette::new(
-        &mut materials,
-        Color::srgb(1.0, 0.5, 0.5),
-        Color::srgb(1.0, 0.8, 0.8),
-        Color::srgb(0.8, 0.3, 0.3),
-    );
+    let purple = ColorPalette::new(&mut materials, Color::srgb(0.7, 0.5, 1.0), 0.5);
+    let green = ColorPalette::new(&mut materials, Color::srgb(0.5, 1.0, 0.5), 0.5);
+    let yellow = ColorPalette::new(&mut materials, Color::srgb(0.8, 0.8, 0.0), 0.5);
+    let red = ColorPalette::new(&mut materials, Color::srgb(1.0, 0.5, 0.5), 0.5);
 
     commands.spawn((
         Camera2d,
