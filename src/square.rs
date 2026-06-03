@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 
 use crate::{
-    game_logic::{SquareGapId, SquareGapLocation, TileId},
+    colors::{PointerInteraction, Theme},
+    game_logic::{PlayerLocation, SquareGapId, SquareGapLocation, TileId},
     main_menu::GameState,
-    user_interface::{ColorPalette, SelectiveInteraction},
 };
 
 const SIZE: usize = 9;
@@ -49,15 +49,7 @@ struct SquareData {
     square_entity: Entity,
 }
 
-pub fn setup_square(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-) {
-    let gray = ColorPalette::new(&mut materials, Color::srgb(1., 1., 1.), 0.3);
-    let blue = ColorPalette::new(&mut materials, Color::srgb(0., 0., 1.), 0.5);
-    let red: ColorPalette = ColorPalette::new(&mut materials, Color::srgb(1., 0., 0.), 0.5);
-
+pub fn setup_square(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, theme: Res<Theme>) {
     let square_entity = commands
         .spawn((Transform::default(), Visibility::Visible))
         .with_children(|parent| {
@@ -72,16 +64,12 @@ pub fn setup_square(
                     parent
                         .spawn((
                             Mesh2d(meshes.add(Rectangle::new(sqr_size, sqr_size))),
-                            MeshMaterial2d(gray.get_color()),
-                            Transform::from_translation(Vec3::new(
-                                sqr_offset * (x as f32 - mid),
-                                sqr_offset * (mid - y as f32),
-                                0.,
-                            )),
+                            MeshMaterial2d(theme.tile.normal.clone()),
+                            transform_from_position(x, y, sqr_offset, mid),
                             Pickable::default(),
                             TileId(id),
                         ))
-                        .with_colors(&gray, &blue, false);
+                        .with_color_set(&theme.tile);
                     // RD
                     if y < SIZE - 1 && x < SIZE - 1 {
                         wall_entities.push(
@@ -93,7 +81,7 @@ pub fn setup_square(
                                             sqr_size * 2. + gap_size,
                                         )),
                                     ),
-                                    MeshMaterial2d(blue.get_color()),
+                                    MeshMaterial2d(theme.wall.normal.clone()),
                                     Visibility::Hidden,
                                     Pickable::IGNORE,
                                     Transform::from_translation(Vec3::new(
@@ -136,7 +124,7 @@ pub fn setup_square(
                                             gap_size,
                                         )),
                                     ),
-                                    MeshMaterial2d(blue.get_color()),
+                                    MeshMaterial2d(theme.wall.normal.clone()),
                                     Visibility::Hidden,
                                     Pickable::IGNORE,
                                     Transform::from_translation(Vec3::new(
@@ -216,6 +204,27 @@ pub fn setup_square(
                     };
                 }
             }
+            parent
+                .spawn((
+                    Mesh2d(meshes.add(Circle::new(sqr_size / 2.))),
+                    transform_from_position(mid as usize, 0, sqr_offset, mid),
+                    Pickable::default(),
+                    MeshMaterial2d(theme.foe.normal.clone()),
+                    PlayerLocation::new(mid as usize, 0),
+                ))
+                .with_color_set(&theme.foe);
+            println!("{} {}", mid as usize, SIZE);
+            parent
+                .spawn((
+                    Mesh2d(meshes.add(Circle::new(sqr_size / 2.))),
+                    transform_from_position(mid as usize, SIZE - 1, sqr_offset, mid),
+                    Pickable::default(),
+                    MeshMaterial2d(theme.own.normal.clone()),
+                    PlayerLocation::new(mid as usize, SIZE),
+                ))
+                .observe(show_wall::<Pointer<Over>>())
+                .observe(hide_wall::<Pointer<Out>>())
+                .with_color_set(&theme.own);
         })
         .id();
 
@@ -224,4 +233,12 @@ pub fn setup_square(
 
 fn cleanup_square(mut commands: Commands, square_data: Res<SquareData>) {
     commands.entity(square_data.square_entity).despawn();
+}
+
+fn transform_from_position(x: usize, y: usize, sqr_offset: f32, mid: f32) -> Transform {
+    Transform::from_translation(Vec3::new(
+        sqr_offset * (x as f32 - mid),
+        sqr_offset * (mid - y as f32),
+        0.,
+    ))
 }

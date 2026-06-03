@@ -4,7 +4,10 @@ use bevy::{
     prelude::*,
 };
 
-use crate::user_interface::{ColorPalette, HiglightInteraction, arrow_right_mesh, cross_mesh};
+use crate::{
+    colors::{PointerInteraction, Theme},
+    shapes::{arrow_mesh, cross_mesh},
+};
 
 pub struct MainMenuPlugin;
 
@@ -48,24 +51,19 @@ pub fn add_camera(mut commands: Commands) {
 pub fn setup_main_menu(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
+    theme: Res<Theme>,
 ) {
-    let purple = ColorPalette::new(&mut materials, Color::srgb(0.7, 0.5, 1.0), 0.5);
-    let green = ColorPalette::new(&mut materials, Color::srgb(0.5, 1.0, 0.5), 0.5);
-    let yellow = ColorPalette::new(&mut materials, Color::srgb(0.8, 0.8, 0.0), 0.5);
-    let red = ColorPalette::new(&mut materials, Color::srgb(1.0, 0.5, 0.5), 0.5);
-
     let main_menu_entity = commands
         .spawn((Transform::default(), Visibility::Visible))
         .with_children(|parent| {
             parent
                 .spawn((
                     Mesh2d(meshes.add(Rectangle::new(32.0, 32.0))),
-                    MeshMaterial2d(purple.get_color()),
+                    MeshMaterial2d(theme.own.normal.clone()),
                     Transform::from_translation(Vec3::new(0., 150., 0.)),
                     Pickable::default(),
                 ))
-                .with_button_colors(&purple)
+                .with_color_set(&theme.own)
                 .observe(
                     |_: On<Pointer<Release>>, mut next_state: ResMut<NextState<GameState>>| {
                         next_state.set(GameState::Square);
@@ -74,11 +72,11 @@ pub fn setup_main_menu(
             parent
                 .spawn((
                     Mesh2d(meshes.add(RegularPolygon::new(16.0, 3))),
-                    MeshMaterial2d(green.get_color()),
+                    MeshMaterial2d(theme.foe.normal.clone()),
                     Transform::from_translation(Vec3::new(0., 50., 0.)),
                     Pickable::default(),
                 ))
-                .with_button_colors(&green)
+                .with_color_set(&theme.foe)
                 .observe(
                     |_: On<Pointer<Release>>, mut next_state: ResMut<NextState<GameState>>| {
                         next_state.set(GameState::Triangle);
@@ -86,16 +84,16 @@ pub fn setup_main_menu(
                 );
             parent
                 .spawn((
-                    Mesh2d(meshes.add(arrow_right_mesh(32.0))),
+                    Mesh2d(meshes.add(arrow_mesh(32.0))),
                     Transform::from_translation(Vec3::new(0., -50., 0.)),
-                    MeshMaterial2d(yellow.get_color()),
+                    MeshMaterial2d(theme.misc.normal.clone()),
                     Pickable::default(),
                 ))
-                .with_button_colors(&yellow);
+                .with_color_set(&theme.misc);
             parent
                 .spawn((
                     Mesh2d(meshes.add(cross_mesh(32.0))),
-                    MeshMaterial2d(red.get_color()),
+                    MeshMaterial2d(theme.exit.normal.clone()),
                     Transform {
                         translation: Vec3::new(0.0, -150.0, 0.0),
                         rotation: Quat::from_rotation_z(std::f32::consts::FRAC_PI_4),
@@ -103,7 +101,7 @@ pub fn setup_main_menu(
                     },
                     Pickable::default(),
                 ))
-                .with_button_colors(&red)
+                .with_color_set(&theme.exit)
                 .observe(
                     |_: On<Pointer<Release>>, mut exit: MessageWriter<AppExit>| {
                         exit.write(AppExit::Success);
