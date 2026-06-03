@@ -1,6 +1,7 @@
 pub struct Edges {
     size: usize,
     shape: Shape,
+    walls: Vec<bool>,
     pub edges: Vec<Vec<usize>>,
 }
 
@@ -32,9 +33,13 @@ impl Edges {
                 }
             }
         }
+
+        let walls = Vec::with_capacity((size-1)*(size-1)*2);
+
         Self {
             edges,
             size,
+            walls,
             shape: Shape::Square,
         }
     }
@@ -73,10 +78,14 @@ impl Edges {
                 }
             }
         }
+        
+        let walls = Vec::with_capacity((size-1)*(size-1)*2);
+
         Self {
             edges,
             size,
             shape: Shape::Triangle,
+            walls,
         }
     }
 }

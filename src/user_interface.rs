@@ -1,6 +1,8 @@
-use bevy::{asset::RenderAssetUsages, mesh::{Indices, PrimitiveTopology}, prelude::*};
-
-
+use bevy::{
+    asset::RenderAssetUsages,
+    mesh::{Indices, PrimitiveTopology},
+    prelude::*,
+};
 
 pub struct ColorPalette {
     normal: Handle<ColorMaterial>,
@@ -43,6 +45,50 @@ impl<'w> HiglightInteraction for EntityCommands<'w> {
             .observe(update_material_on::<Pointer<Press>>(color.dark.clone()))
             .observe(update_material_on::<Pointer<Release>>(color.light.clone()));
 
+        self
+    }
+}
+
+pub trait SelectiveInteraction {
+    fn with_colors(
+        &mut self,
+        normal_color: &ColorPalette,
+        selectable_color: &ColorPalette,
+        selectable: bool,
+    ) -> &mut Self;
+}
+
+impl<'w> SelectiveInteraction for EntityCommands<'w> {
+    fn with_colors(
+        &mut self,
+        normal_color: &ColorPalette,
+        selectable_color: &ColorPalette,
+        selectable: bool,
+    ) -> &mut Self {
+        match selectable {
+            true => {
+                self.observe(update_material_on::<Pointer<Over>>(
+                    selectable_color.light.clone(),
+                ))
+                .observe(update_material_on::<Pointer<Out>>(
+                    selectable_color.normal.clone(),
+                ))
+                .observe(update_material_on::<Pointer<Press>>(
+                    selectable_color.dark.clone(),
+                ))
+                .observe(update_material_on::<Pointer<Release>>(
+                    selectable_color.light.clone(),
+                ));
+            }
+            false => {
+                self.observe(update_material_on::<Pointer<Over>>(
+                    normal_color.light.clone(),
+                ))
+                .observe(update_material_on::<Pointer<Out>>(
+                    normal_color.normal.clone(),
+                ));
+            }
+        }
         self
     }
 }

@@ -3,6 +3,7 @@ mod grid;
 mod main_menu;
 mod square;
 pub mod user_interface;
+pub mod game_logic;
 
 use bevy::prelude::*;
 use bevy_steamworks::SteamworksPlugin;
