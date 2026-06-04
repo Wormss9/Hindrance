@@ -10,7 +10,17 @@ pub struct Pointable {
 }
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct TileId(pub usize);
+pub struct Tile {
+    pub id: usize,
+    pub x: usize,
+    pub y: usize,
+}
+
+impl Tile {
+    pub fn new(id: usize, x: usize, y: usize) -> Self {
+        Self { id, x, y }
+    }
+}
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SquareGapId {
@@ -30,12 +40,24 @@ impl SquareGapId {
 }
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct PlayerLocation {
+pub struct OwnLocation {
     pub x: usize,
     pub y: usize,
 }
 
-impl PlayerLocation {
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct FoeLocation {
+    pub x: usize,
+    pub y: usize,
+}
+
+impl OwnLocation {
+    pub fn new(x: usize, y: usize) -> Self {
+        Self { x, y }
+    }
+}
+
+impl FoeLocation {
     pub fn new(x: usize, y: usize) -> Self {
         Self { x, y }
     }
@@ -56,7 +78,7 @@ pub trait PointerInteraction {
 impl<'w> PointerInteraction for EntityCommands<'w> {
     fn with_pointer_interaction(&mut self) -> &mut Self {
         self.observe(
-            move |event: On<Pointer<Over>>, mut query: Query<&mut Pointable, With<TileId>>| {
+            move |event: On<Pointer<Over>>, mut query: Query<&mut Pointable, With<Tile>>| {
                 let entity = event.event_target();
                 if let Ok(mut pointable) = query.get_mut(entity) {
                     pointable.over = true;
@@ -64,7 +86,7 @@ impl<'w> PointerInteraction for EntityCommands<'w> {
             },
         )
         .observe(
-            move |event: On<Pointer<Out>>, mut query: Query<&mut Pointable, With<TileId>>| {
+            move |event: On<Pointer<Out>>, mut query: Query<&mut Pointable, With<Tile>>| {
                 let entity = event.event_target();
                 if let Ok(mut pointable) = query.get_mut(entity) {
                     pointable.over = false;
@@ -72,7 +94,7 @@ impl<'w> PointerInteraction for EntityCommands<'w> {
             },
         )
         .observe(
-            move |event: On<Pointer<Press>>, mut query: Query<&mut Pointable, With<TileId>>| {
+            move |event: On<Pointer<Press>>, mut query: Query<&mut Pointable, With<Tile>>| {
                 let entity = event.event_target();
                 if let Ok(mut pointable) = query.get_mut(entity) {
                     pointable.press = true;
@@ -80,7 +102,7 @@ impl<'w> PointerInteraction for EntityCommands<'w> {
             },
         )
         .observe(
-            move |event: On<Pointer<Release>>, mut query: Query<&mut Pointable, With<TileId>>| {
+            move |event: On<Pointer<Release>>, mut query: Query<&mut Pointable, With<Tile>>| {
                 let entity = event.event_target();
                 if let Ok(mut pointable) = query.get_mut(entity) {
                     pointable.press = false;
@@ -92,7 +114,35 @@ impl<'w> PointerInteraction for EntityCommands<'w> {
     }
 }
 
-fn interactable(event: On<Pointer<Over>>, query: Query<&Interactable, With<TileId>>) -> bool {
+pub trait OwnMovement {
+    fn with_move_own(&mut self) -> &mut Self;
+}
+
+impl<'w> OwnMovement for EntityCommands<'w> {
+    fn with_move_own(&mut self) -> &mut Self {
+        self.observe(            move |event: On<Pointer<Release>>,
+                  mut own: Query<(&mut Transform, &mut OwnLocation), With<OwnLocation>>,
+                  tile: Query<(&Interactable, &Transform, &Tile),Without<OwnLocation>>| {
+                let Ok((interactable, target_transform, tile)) = tile.get(event.event_target())
+                else {
+                    return;
+                };
+                let Ok((mut own_transform, mut own_location)) = own.single_mut() else {
+                    return;
+                };
+                if interactable.0 {
+                    *own_transform = *target_transform;
+                    own_location.x = tile.x;
+                    own_location.y = tile.y;
+                }
+            },
+        );
+
+        self
+    }
+}
+
+fn interactable(event: On<Pointer<Over>>, query: Query<&Interactable, With<Tile>>) -> bool {
     let entity = event.event_target();
     query.get(entity).ok().map(|i| i.0).unwrap_or(false)
 }

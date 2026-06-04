@@ -1,6 +1,6 @@
 use bevy::ecs::resource::Resource;
 
-use crate::game_logic::PlayerLocation;
+use crate::game_logic::{FoeLocation, OwnLocation};
 
 #[derive(Resource)]
 pub struct Edges {
@@ -93,9 +93,26 @@ impl Edges {
             walls,
         }
     }
-    pub fn reachable_from(&self, player_location: &PlayerLocation) -> Vec<usize> {
-        let location = player_location.x + player_location.y * self.size;
-        self.edges[location].clone()
+    pub fn reachable_from(
+        &self,
+        own_location: &OwnLocation,
+        foe_location: &FoeLocation,
+    ) -> Vec<usize> {
+        let own_location = own_location.x + own_location.y * self.size;
+        let foe_location = foe_location.x + foe_location.y * self.size;
+        let mut reachable = self.edges[own_location].clone();
+
+        if reachable.contains(&foe_location) {
+            reachable.retain(|&x| x != foe_location);
+
+            for &location in &self.edges[foe_location] {
+                if location != own_location {
+                    reachable.push(location);
+                }
+            }
+        }
+
+        reachable
     }
 }
 

@@ -3,8 +3,8 @@ use bevy::prelude::*;
 use crate::{
     colors::{PointerColorInteraction, Theme},
     game_logic::{
-        Interactable, PlayerLocation, Pointable, PointerInteraction, SquareGapId,
-        SquareGapLocation, TileId,
+        FoeLocation, Interactable, OwnLocation, OwnMovement, Pointable, PointerInteraction,
+        SquareGapId, SquareGapLocation, Tile,
     },
     grid::Edges,
     main_menu::GameState,
@@ -94,9 +94,11 @@ pub fn setup_square(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, th
                             transform_from_position(x, y, sqr_offset, mid),
                             Pickable::default(),
                             Pointable::default(),
-                            TileId(id),
+                            Tile::new(id, x, y),
+                            Interactable(false),
                         ))
-                        .with_pointer_interaction();
+                        .with_pointer_interaction()
+                        .with_move_own();
 
                     // RD
                     if y < SIZE - 1 && x < SIZE - 1 {
@@ -237,6 +239,7 @@ pub fn setup_square(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, th
                 transform_from_position(mid as usize, 0, sqr_offset, mid),
                 Pickable::default(),
                 MeshMaterial2d(theme.foe.normal.clone()),
+                FoeLocation::new(mid as usize, 0),
             ));
             parent
                 .spawn((
@@ -244,7 +247,7 @@ pub fn setup_square(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, th
                     transform_from_position(mid as usize, SIZE - 1, sqr_offset, mid),
                     Pickable::default(),
                     MeshMaterial2d(theme.own.normal.clone()),
-                    PlayerLocation::new(mid as usize, SIZE - 1),
+                    OwnLocation::new(mid as usize, SIZE - 1),
                 ))
                 .observe(show_wall::<Pointer<Over>>())
                 .observe(hide_wall::<Pointer<Out>>());
@@ -255,29 +258,56 @@ pub fn setup_square(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, th
 }
 
 fn update_reachable_tiles(
-    mut query: Query<(&mut MeshMaterial2d<ColorMaterial>, &Pointable, &TileId)>,
-    player_query: Query<&PlayerLocation>,
+    mut query: Query<(
+        &mut MeshMaterial2d<ColorMaterial>,
+        &Pointable,
+        &Tile,
+        &mut Interactable,
+    )>,
+    own_query: Query<&OwnLocation>,
+    foe_query: Query<&FoeLocation>,
     theme: Res<Theme>,
     edges: Res<Edges>,
 ) {
-    if let Ok(player_location) = player_query.single() {
-        let reachable_ids = edges.reachable_from(player_location);
+    let Ok(own_location) = own_query.single() else {
+        return;
+    };
 
-        for (mut material, pointable, id) in &mut query {
-            let reachable = reachable_ids.contains(&id.0);
+    let Ok(foe_location) = foe_query.single() else {
+        return;
+    };
 
-            material.0 = if reachable {
-                if pointable.press {
-                    theme.reachable_tile.dark.clone()
-                } else if pointable.over {
-                    theme.reachable_tile.light.clone()
-                } else {
-                    theme.reachable_tile.normal.clone()
-                }
+    let reachable_ids = edges.reachable_from(own_location, foe_location);
+
+    for (mut material, pointable, tile, mut interactable) in &mut query {
+        let reachable = reachable_ids.contains(&tile.id);
+
+        material.0 = if reachable {
+            interactable.0 = true;
+            if pointable.press {
+                theme.reachable_tile.dark.clone()
+            } else if pointable.over {
+                theme.reachable_tile.light.clone()
             } else {
-                theme.tile.normal.clone()
+                theme.reachable_tile.normal.clone()
             }
+        } else {
+            interactable.0 = false;
+            theme.tile.normal.clone()
         }
+    }
+}
+
+fn clean_reachable_tiles(
+    mut query: Query<
+        (&mut MeshMaterial2d<ColorMaterial>, &mut Interactable),
+        (With<Pointable>, With<Tile>),
+    >,
+    theme: Res<Theme>,
+) {
+    for (mut material, mut interactable) in &mut query {
+        material.0 = theme.tile.normal.clone();
+        interactable.0 = false;
     }
 }
 
