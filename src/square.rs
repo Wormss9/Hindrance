@@ -1,13 +1,14 @@
 use bevy::prelude::*;
 
 use crate::{
-    colors::Theme,
+    colors::{PointerColorInteraction, Theme},
     game_logic::{
         Interactable, PlayerLocation, Pointable, PointerInteraction, SquareGapId,
         SquareGapLocation, TileId,
     },
     grid::Edges,
     main_menu::GameState,
+    shapes::arrow_mesh,
 };
 
 const SIZE: usize = 9;
@@ -66,6 +67,22 @@ pub fn setup_square(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, th
             let gap_size = 15.;
             let sqr_offset = sqr_size + gap_size;
             let mid = (SIZE / 2) as f32;
+
+            parent
+                .spawn((
+                    Mesh2d(meshes.add(arrow_mesh(32.0))),
+                    Transform {
+                        translation: Vec3::new(
+                            sqr_offset * (-mid - 2.),
+                            -sqr_offset * (mid - (SIZE - 1) as f32),
+                            0.,
+                        ),
+                        rotation: Quat::from_rotation_z(std::f32::consts::PI),
+                        ..default()
+                    },
+                    Pickable::default(),
+                ))
+                .with_color_set(&theme.exit);
             let mut wall_entities = Vec::with_capacity((SIZE - 1) * (SIZE - 1) * 2);
             for y in 0..SIZE {
                 for x in 0..SIZE {

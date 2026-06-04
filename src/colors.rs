@@ -62,16 +62,17 @@ impl ColorSet {
     }
 }
 
-pub trait PointerInteraction {
+pub trait PointerColorInteraction {
     fn with_color_set(&mut self, color: &ColorSet) -> &mut Self;
 }
 
-impl<'w> PointerInteraction for EntityCommands<'w> {
+impl<'w> PointerColorInteraction for EntityCommands<'w> {
     fn with_color_set(&mut self, color: &ColorSet) -> &mut Self {
         self.observe(update_material_on::<Pointer<Over>>(color.light.clone()))
             .observe(update_material_on::<Pointer<Out>>(color.normal.clone()))
             .observe(update_material_on::<Pointer<Press>>(color.dark.clone()))
-            .observe(update_material_on::<Pointer<Release>>(color.light.clone()));
+            .observe(update_material_on::<Pointer<Release>>(color.light.clone()))
+            .insert( MeshMaterial2d(color.normal.clone()),);
 
         self
     }

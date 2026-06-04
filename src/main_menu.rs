@@ -5,7 +5,7 @@ use bevy::{
 };
 
 use crate::{
-    colors::{PointerInteraction, Theme},
+    colors::{PointerColorInteraction, Theme},
     shapes::{arrow_mesh, cross_mesh},
 };
 
@@ -59,7 +59,6 @@ pub fn setup_main_menu(
             parent
                 .spawn((
                     Mesh2d(meshes.add(Rectangle::new(32.0, 32.0))),
-                    MeshMaterial2d(theme.own.normal.clone()),
                     Transform::from_translation(Vec3::new(0., 150., 0.)),
                     Pickable::default(),
                 ))
@@ -72,7 +71,6 @@ pub fn setup_main_menu(
             parent
                 .spawn((
                     Mesh2d(meshes.add(RegularPolygon::new(16.0, 3))),
-                    MeshMaterial2d(theme.foe.normal.clone()),
                     Transform::from_translation(Vec3::new(0., 50., 0.)),
                     Pickable::default(),
                 ))
@@ -86,14 +84,12 @@ pub fn setup_main_menu(
                 .spawn((
                     Mesh2d(meshes.add(arrow_mesh(32.0))),
                     Transform::from_translation(Vec3::new(0., -50., 0.)),
-                    MeshMaterial2d(theme.misc.normal.clone()),
                     Pickable::default(),
                 ))
                 .with_color_set(&theme.misc);
             parent
                 .spawn((
                     Mesh2d(meshes.add(cross_mesh(32.0))),
-                    MeshMaterial2d(theme.exit.normal.clone()),
                     Transform {
                         translation: Vec3::new(0.0, -150.0, 0.0),
                         rotation: Quat::from_rotation_z(std::f32::consts::FRAC_PI_4),
