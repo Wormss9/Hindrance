@@ -1,8 +1,12 @@
 use bevy::prelude::*;
 
 use crate::{
-    colors::{PointerInteraction, Theme},
-    game_logic::{PlayerLocation, SquareGapId, SquareGapLocation, TileId},
+    colors::Theme,
+    game_logic::{
+        Interactable, PlayerLocation, Pointable, PointerInteraction, SquareGapId,
+        SquareGapLocation, TileId,
+    },
+    grid::Edges,
     main_menu::GameState,
 };
 
@@ -13,7 +17,11 @@ pub struct SquarePlugin;
 impl Plugin for SquarePlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(OnEnter(GameState::Square), setup_square)
-            .add_systems(OnExit(GameState::Square), cleanup_square);
+            .add_systems(OnExit(GameState::Square), cleanup_square)
+            .add_systems(
+                Update,
+                update_reachable_tiles.run_if(in_state(GameState::Square)),
+            );
     }
 }
 
@@ -50,6 +58,7 @@ struct SquareData {
 }
 
 pub fn setup_square(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, theme: Res<Theme>) {
+    commands.insert_resource(Edges::square(SIZE));
     let square_entity = commands
         .spawn((Transform::default(), Visibility::Visible))
         .with_children(|parent| {
@@ -67,9 +76,11 @@ pub fn setup_square(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, th
                             MeshMaterial2d(theme.tile.normal.clone()),
                             transform_from_position(x, y, sqr_offset, mid),
                             Pickable::default(),
+                            Pointable::default(),
                             TileId(id),
                         ))
-                        .with_color_set(&theme.tile);
+                        .with_pointer_interaction();
+
                     // RD
                     if y < SIZE - 1 && x < SIZE - 1 {
                         wall_entities.push(
@@ -204,31 +215,53 @@ pub fn setup_square(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, th
                     };
                 }
             }
-            parent
-                .spawn((
-                    Mesh2d(meshes.add(Circle::new(sqr_size / 2.))),
-                    transform_from_position(mid as usize, 0, sqr_offset, mid),
-                    Pickable::default(),
-                    MeshMaterial2d(theme.foe.normal.clone()),
-                    PlayerLocation::new(mid as usize, 0),
-                ))
-                .with_color_set(&theme.foe);
-            println!("{} {}", mid as usize, SIZE);
+            parent.spawn((
+                Mesh2d(meshes.add(Circle::new(sqr_size / 2.))),
+                transform_from_position(mid as usize, 0, sqr_offset, mid),
+                Pickable::default(),
+                MeshMaterial2d(theme.foe.normal.clone()),
+            ));
             parent
                 .spawn((
                     Mesh2d(meshes.add(Circle::new(sqr_size / 2.))),
                     transform_from_position(mid as usize, SIZE - 1, sqr_offset, mid),
                     Pickable::default(),
                     MeshMaterial2d(theme.own.normal.clone()),
-                    PlayerLocation::new(mid as usize, SIZE),
+                    PlayerLocation::new(mid as usize, SIZE - 1),
                 ))
                 .observe(show_wall::<Pointer<Over>>())
-                .observe(hide_wall::<Pointer<Out>>())
-                .with_color_set(&theme.own);
+                .observe(hide_wall::<Pointer<Out>>());
         })
         .id();
 
     commands.insert_resource(SquareData { square_entity });
+}
+
+fn update_reachable_tiles(
+    mut query: Query<(&mut MeshMaterial2d<ColorMaterial>, &Pointable, &TileId)>,
+    player_query: Query<&PlayerLocation>,
+    theme: Res<Theme>,
+    edges: Res<Edges>,
+) {
+    if let Ok(player_location) = player_query.single() {
+        let reachable_ids = edges.reachable_from(player_location);
+
+        for (mut material, pointable, id) in &mut query {
+            let reachable = reachable_ids.contains(&id.0);
+
+            material.0 = if reachable {
+                if pointable.press {
+                    theme.reachable_tile.dark.clone()
+                } else if pointable.over {
+                    theme.reachable_tile.light.clone()
+                } else {
+                    theme.reachable_tile.normal.clone()
+                }
+            } else {
+                theme.tile.normal.clone()
+            }
+        }
+    }
 }
 
 fn cleanup_square(mut commands: Commands, square_data: Res<SquareData>) {

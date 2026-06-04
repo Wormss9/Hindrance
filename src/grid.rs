@@ -1,3 +1,8 @@
+use bevy::ecs::resource::Resource;
+
+use crate::game_logic::PlayerLocation;
+
+#[derive(Resource)]
 pub struct Edges {
     size: usize,
     shape: Shape,
@@ -34,7 +39,7 @@ impl Edges {
             }
         }
 
-        let walls = Vec::with_capacity((size-1)*(size-1)*2);
+        let walls = Vec::with_capacity((size - 1) * (size - 1) * 2);
 
         Self {
             edges,
@@ -78,8 +83,8 @@ impl Edges {
                 }
             }
         }
-        
-        let walls = Vec::with_capacity((size-1)*(size-1)*2);
+
+        let walls = Vec::with_capacity((size - 1) * (size - 1) * 2);
 
         Self {
             edges,
@@ -87,6 +92,10 @@ impl Edges {
             shape: Shape::Triangle,
             walls,
         }
+    }
+    pub fn reachable_from(&self, player_location: &PlayerLocation) -> Vec<usize> {
+        let location = player_location.x + player_location.y * self.size;
+        self.edges[location].clone()
     }
 }
 
