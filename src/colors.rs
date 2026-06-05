@@ -29,6 +29,7 @@ pub struct Theme {
     pub misc: ColorSet,
     pub wall: ColorSet,
     pub exit: ColorSet,
+    pub curtain: ColorSet,
 }
 
 impl Theme {
@@ -43,6 +44,7 @@ impl Theme {
             misc: ColorSet::new(materials, Color::srgb(0.8, 0.8, 0.2), 0.5),
             wall: ColorSet::new(materials, Color::srgb(0.2, 0.2, 1.0), 0.5),
             exit: ColorSet::new(materials, Color::srgb(1.0, 0.2, 0.2), 0.5),
+            curtain: ColorSet::dark(materials, Color::srgba(0.0, 0.0, 0.0, 0.9)),
         }
     }
 }
@@ -60,6 +62,13 @@ impl ColorSet {
             dark: materials.add(base.with_luminance(luminance / 1.5)),
         }
     }
+    pub fn dark(materials: &mut Mut<Assets<ColorMaterial>>, base: Color) -> Self {
+        Self {
+            normal: materials.add(base),
+            light: materials.add(base),
+            dark: materials.add(base),
+        }
+    }
 }
 
 pub trait PointerColorInteraction {
@@ -72,7 +81,7 @@ impl<'w> PointerColorInteraction for EntityCommands<'w> {
             .observe(update_material_on::<Pointer<Out>>(color.normal.clone()))
             .observe(update_material_on::<Pointer<Press>>(color.dark.clone()))
             .observe(update_material_on::<Pointer<Release>>(color.light.clone()))
-            .insert( MeshMaterial2d(color.normal.clone()),);
+            .insert(MeshMaterial2d(color.normal.clone()));
 
         self
     }

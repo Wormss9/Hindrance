@@ -2,9 +2,12 @@ use bevy::prelude::*;
 
 use crate::{
     colors::{PointerColorInteraction, Theme},
+    exit_menu::ExitMenuState,
     game_logic::{
-        FoeLocation, Interactable, OwnLocation, OwnMovement, Pointable, PointerInteraction,
-        SquareGapId, SquareGapLocation, Tile,
+        OwnMovement, PointerInteraction,
+        bundles::{TileBundle, WallBundle},
+        components::{Foe, GridLocation, Id, Own, SquareGapId, SquareGapLocation},
+        systems::update_reachable_tiles,
     },
     grid::Edges,
     main_menu::GameState,
@@ -82,20 +85,22 @@ pub fn setup_square(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, th
                     },
                     Pickable::default(),
                 ))
-                .with_color_set(&theme.exit);
+                .with_color_set(&theme.exit)
+                .observe(
+                    |_: On<Pointer<Release>>, mut exit_state: ResMut<NextState<ExitMenuState>>| {
+                        exit_state.set(ExitMenuState::Exiting);
+                    },
+                );
             let mut wall_entities = Vec::with_capacity((SIZE - 1) * (SIZE - 1) * 2);
             for y in 0..SIZE {
                 for x in 0..SIZE {
                     let id = y * SIZE + x;
                     parent
-                        .spawn((
+                        .spawn(TileBundle::new(
                             Mesh2d(meshes.add(Rectangle::new(sqr_size, sqr_size))),
-                            MeshMaterial2d(theme.tile.normal.clone()),
+                            &theme,
                             transform_from_position(x, y, sqr_offset, mid),
-                            Pickable::default(),
-                            Pointable::default(),
-                            Tile::new(id, x, y),
-                            Interactable(false),
+                            id,
                         ))
                         .with_pointer_interaction()
                         .with_move_own();
@@ -104,16 +109,14 @@ pub fn setup_square(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, th
                     if y < SIZE - 1 && x < SIZE - 1 {
                         wall_entities.push(
                             parent
-                                .spawn((
+                                .spawn(WallBundle::new(
                                     Mesh2d(
                                         meshes.add(Rectangle::new(
                                             gap_size,
                                             sqr_size * 2. + gap_size,
                                         )),
                                     ),
-                                    MeshMaterial2d(theme.wall.normal.clone()),
-                                    Visibility::Hidden,
-                                    Pickable::IGNORE,
+                                    &theme,
                                     Transform::from_translation(Vec3::new(
                                         sqr_offset * (x as f32 - mid) + sqr_offset / 2.,
                                         sqr_offset * (mid - y as f32) - sqr_offset / 2.,
@@ -147,16 +150,14 @@ pub fn setup_square(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, th
                     if y < SIZE - 1 && x < SIZE - 1 {
                         wall_entities.push(
                             parent
-                                .spawn((
+                                .spawn(WallBundle::new(
                                     Mesh2d(
                                         meshes.add(Rectangle::new(
                                             sqr_size * 2. + gap_size,
                                             gap_size,
                                         )),
                                     ),
-                                    MeshMaterial2d(theme.wall.normal.clone()),
-                                    Visibility::Hidden,
-                                    Pickable::IGNORE,
+                                    &theme,
                                     Transform::from_translation(Vec3::new(
                                         sqr_offset * (x as f32 - mid) + sqr_offset / 2.,
                                         sqr_offset * (mid - y as f32) - sqr_offset / 2.,
@@ -239,7 +240,9 @@ pub fn setup_square(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, th
                 transform_from_position(mid as usize, 0, sqr_offset, mid),
                 Pickable::default(),
                 MeshMaterial2d(theme.foe.normal.clone()),
-                FoeLocation::new(mid as usize, 0),
+                GridLocation::new(mid as usize, 0),
+                Id(4),
+                Foe,
             ));
             parent
                 .spawn((
@@ -247,7 +250,9 @@ pub fn setup_square(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, th
                     transform_from_position(mid as usize, SIZE - 1, sqr_offset, mid),
                     Pickable::default(),
                     MeshMaterial2d(theme.own.normal.clone()),
-                    OwnLocation::new(mid as usize, SIZE - 1),
+                    GridLocation::new(mid as usize, SIZE - 1),
+                    Id(76),
+                    Own,
                 ))
                 .observe(show_wall::<Pointer<Over>>())
                 .observe(hide_wall::<Pointer<Out>>());
@@ -255,60 +260,6 @@ pub fn setup_square(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, th
         .id();
 
     commands.insert_resource(SquareData { square_entity });
-}
-
-fn update_reachable_tiles(
-    mut query: Query<(
-        &mut MeshMaterial2d<ColorMaterial>,
-        &Pointable,
-        &Tile,
-        &mut Interactable,
-    )>,
-    own_query: Query<&OwnLocation>,
-    foe_query: Query<&FoeLocation>,
-    theme: Res<Theme>,
-    edges: Res<Edges>,
-) {
-    let Ok(own_location) = own_query.single() else {
-        return;
-    };
-
-    let Ok(foe_location) = foe_query.single() else {
-        return;
-    };
-
-    let reachable_ids = edges.reachable_from(own_location, foe_location);
-
-    for (mut material, pointable, tile, mut interactable) in &mut query {
-        let reachable = reachable_ids.contains(&tile.id);
-
-        material.0 = if reachable {
-            interactable.0 = true;
-            if pointable.press {
-                theme.reachable_tile.dark.clone()
-            } else if pointable.over {
-                theme.reachable_tile.light.clone()
-            } else {
-                theme.reachable_tile.normal.clone()
-            }
-        } else {
-            interactable.0 = false;
-            theme.tile.normal.clone()
-        }
-    }
-}
-
-fn clean_reachable_tiles(
-    mut query: Query<
-        (&mut MeshMaterial2d<ColorMaterial>, &mut Interactable),
-        (With<Pointable>, With<Tile>),
-    >,
-    theme: Res<Theme>,
-) {
-    for (mut material, mut interactable) in &mut query {
-        material.0 = theme.tile.normal.clone();
-        interactable.0 = false;
-    }
 }
 
 fn cleanup_square(mut commands: Commands, square_data: Res<SquareData>) {

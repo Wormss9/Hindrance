@@ -1,10 +1,11 @@
 pub mod colors;
+pub mod exit_menu;
 mod error;
 pub mod game_logic;
 mod grid;
 mod main_menu;
-mod square;
 pub mod shapes;
+mod square;
 
 use bevy::prelude::*;
 use bevy_steamworks::SteamworksPlugin;
@@ -16,9 +17,9 @@ fn main() {
             MeshPickingPlugin,
             colors::ColorsPlugin,
             main_menu::MainMenuPlugin,
-            // GameLogicPugin,
+            exit_menu::ExitMenuPlugin,
             square::SquarePlugin,
-            //TrianglePlugin,
+            //triangle::TrianglePlugin,
             SteamworksPlugin::init_app(480).unwrap_or_else(error::error_abort),
         ))
         .run();
