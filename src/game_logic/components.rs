@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use crate::game_logic::{SquareWall, TriangleWall};
+
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Interactable(pub bool);
 
@@ -57,3 +59,9 @@ pub struct Own;
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Foe;
+
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Wall {
+    Square(SquareWall),
+    Triangle(TriangleWall),
+}

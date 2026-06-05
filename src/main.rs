@@ -2,7 +2,6 @@ pub mod colors;
 pub mod exit_menu;
 mod error;
 pub mod game_logic;
-mod grid;
 mod main_menu;
 pub mod shapes;
 mod square;

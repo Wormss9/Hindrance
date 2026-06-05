@@ -1,15 +1,21 @@
+use crate::{
+    colors::Theme,
+    game_logic::{Edges, components::{Foe, Id, Interactable, Own, Pointable, Tile}},
+};
 use bevy::prelude::*;
-use crate::{colors::Theme, game_logic::components::{Foe, Id, Interactable, Own, Pointable, Tile}, grid::Edges};
 
 pub fn update_reachable_tiles(
-    mut query: Query<(
-        &mut MeshMaterial2d<ColorMaterial>,
-        &Pointable,
-        &Id,
-        &mut Interactable,
-    ),With<Tile>>,
-    own_query: Query<&Id,With<Own>>,
-    foe_query: Query<&Id,With<Foe>>,
+    mut query: Query<
+        (
+            &mut MeshMaterial2d<ColorMaterial>,
+            &Pointable,
+            &Id,
+            &mut Interactable,
+        ),
+        With<Tile>,
+    >,
+    own_query: Query<&Id, With<Own>>,
+    foe_query: Query<&Id, With<Foe>>,
     theme: Res<Theme>,
     edges: Res<Edges>,
 ) {
@@ -43,10 +49,7 @@ pub fn update_reachable_tiles(
 }
 
 pub fn clean_reachable_tiles(
-    mut query: Query<
-        (&mut MeshMaterial2d<ColorMaterial>, &mut Interactable),
-        With<Tile>,
-    >,
+    mut query: Query<(&mut MeshMaterial2d<ColorMaterial>, &mut Interactable), With<Tile>>,
     theme: Res<Theme>,
 ) {
     for (mut material, mut interactable) in &mut query {

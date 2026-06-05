@@ -4,17 +4,17 @@ use crate::{
     colors::{PointerColorInteraction, Theme},
     exit_menu::ExitMenuState,
     game_logic::{
-        OwnMovement, PointerInteraction,
+        BoardParameters, Edges, Shape, SquareWall,
         bundles::{TileBundle, WallBundle},
-        components::{Foe, GridLocation, Id, Own, SquareGapId, SquareGapLocation},
+        components::{Foe, GridLocation, Id, Own, SquareGapId, SquareGapLocation, Wall},
+        observers::{OwnMovement, PointerInteraction},
         systems::update_reachable_tiles,
     },
-    grid::Edges,
     main_menu::GameState,
     shapes::arrow_mesh,
 };
 
-const SIZE: usize = 9;
+const SHAPE: Shape = Shape::Square;
 
 pub struct SquarePlugin;
 
@@ -62,22 +62,19 @@ struct SquareData {
 }
 
 pub fn setup_square(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, theme: Res<Theme>) {
-    commands.insert_resource(Edges::square(SIZE));
+    commands.insert_resource(Edges::new(SHAPE));
     let square_entity = commands
         .spawn((Transform::default(), Visibility::Visible))
         .with_children(|parent| {
-            let sqr_size = 60.;
-            let gap_size = 15.;
-            let sqr_offset = sqr_size + gap_size;
-            let mid = (SIZE / 2) as f32;
-
+            let board: BoardParameters = SHAPE.into();
+            //Exit arrow
             parent
                 .spawn((
                     Mesh2d(meshes.add(arrow_mesh(32.0))),
                     Transform {
                         translation: Vec3::new(
-                            sqr_offset * (-mid - 2.),
-                            -sqr_offset * (mid - (SIZE - 1) as f32),
+                            -board.offset_size * (board.mid - 2) as f32,
+                            board.offset_size * (board.size - board.mid - 1) as f32,
                             0.,
                         ),
                         rotation: Quat::from_rotation_z(std::f32::consts::PI),
@@ -91,143 +88,135 @@ pub fn setup_square(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, th
                         exit_state.set(ExitMenuState::Exiting);
                     },
                 );
-            let mut wall_entities = Vec::with_capacity((SIZE - 1) * (SIZE - 1) * 2);
-            for y in 0..SIZE {
-                for x in 0..SIZE {
-                    let id = y * SIZE + x;
+
+            let mut wall_entities = Vec::with_capacity((board.size - 1) * (board.size - 1) * 2);
+
+            for y in 0..board.size {
+                for x in 0..board.size {
                     parent
-                        .spawn(TileBundle::new(
-                            Mesh2d(meshes.add(Rectangle::new(sqr_size, sqr_size))),
-                            &theme,
-                            transform_from_position(x, y, sqr_offset, mid),
-                            id,
-                        ))
+                        .spawn(TileBundle::new(&mut meshes, &theme, x, y, SHAPE))
                         .with_pointer_interaction()
                         .with_move_own();
 
                     // RD
-                    if y < SIZE - 1 && x < SIZE - 1 {
+                    if y < board.size - 1 && x < board.size - 1 {
                         wall_entities.push(
                             parent
                                 .spawn(WallBundle::new(
-                                    Mesh2d(
-                                        meshes.add(Rectangle::new(
-                                            gap_size,
-                                            sqr_size * 2. + gap_size,
-                                        )),
-                                    ),
+                                    &mut meshes,
                                     &theme,
-                                    Transform::from_translation(Vec3::new(
-                                        sqr_offset * (x as f32 - mid) + sqr_offset / 2.,
-                                        sqr_offset * (mid - y as f32) - sqr_offset / 2.,
-                                        0.,
-                                    )),
+                                    x,
+                                    y,
+                                    SHAPE,
+                                    Wall::Square(SquareWall::Down),
                                 ))
                                 .id(),
                         );
                         parent
                             .spawn((
-                                Mesh2d(
-                                    meshes
-                                        .add(Rectangle::new(sqr_offset - sqr_size, sqr_size / 2.)),
-                                ),
+                                Mesh2d(meshes.add(Rectangle::new(
+                                    board.offset_size - board.tile_size,
+                                    board.tile_size / 2.,
+                                ))),
                                 Transform::from_translation(Vec3::new(
-                                    sqr_offset * (x as f32 - mid) + sqr_offset / 2.,
-                                    sqr_offset * (mid - y as f32) - sqr_size / 4.,
+                                    board.offset_size * (x as f32 - board.mid as f32)
+                                        + board.offset_size / 2.,
+                                    board.offset_size * (board.mid as f32 - y as f32)
+                                        - board.tile_size / 4.,
                                     0.,
                                 )),
                                 Pickable::default(),
                                 SquareGapId::new(
-                                    id,
+                                    SHAPE.get_id(x, y).expect("TODO failed"),
                                     SquareGapLocation::RD,
-                                    wall_entities[2 * x + 2 * (SIZE - 1) * y],
+                                    wall_entities[2 * x + 2 * (board.size - 1) * y],
                                 ),
                             ))
                             .observe(show_wall::<Pointer<Over>>())
                             .observe(hide_wall::<Pointer<Out>>());
                     };
                     // DR
-                    if y < SIZE - 1 && x < SIZE - 1 {
+                    if y < board.size - 1 && x < board.size - 1 {
                         wall_entities.push(
                             parent
                                 .spawn(WallBundle::new(
-                                    Mesh2d(
-                                        meshes.add(Rectangle::new(
-                                            sqr_size * 2. + gap_size,
-                                            gap_size,
-                                        )),
-                                    ),
+                                    &mut meshes,
                                     &theme,
-                                    Transform::from_translation(Vec3::new(
-                                        sqr_offset * (x as f32 - mid) + sqr_offset / 2.,
-                                        sqr_offset * (mid - y as f32) - sqr_offset / 2.,
-                                        0.,
-                                    )),
+                                    x,
+                                    y,
+                                    SHAPE,
+                                    Wall::Square(SquareWall::Right),
                                 ))
                                 .id(),
                         );
                         parent
                             .spawn((
-                                Mesh2d(
-                                    meshes
-                                        .add(Rectangle::new(sqr_size / 2., sqr_offset - sqr_size)),
-                                ),
+                                Mesh2d(meshes.add(Rectangle::new(
+                                    board.tile_size / 2.,
+                                    board.offset_size - board.tile_size,
+                                ))),
                                 Transform::from_translation(Vec3::new(
-                                    sqr_offset * (x as f32 - mid) + sqr_size / 4.,
-                                    sqr_offset * (mid - y as f32) - sqr_offset / 2.,
+                                    board.offset_size * (x as f32 - board.mid as f32)
+                                        + board.tile_size / 4.,
+                                    board.offset_size * (board.mid as f32 - y as f32)
+                                        - board.offset_size / 2.,
                                     0.,
                                 )),
                                 Pickable::default(),
                                 SquareGapId::new(
-                                    id,
+                                    SHAPE.get_id(x, y).expect("TODO failed"),
                                     SquareGapLocation::DR,
-                                    wall_entities[2 * x + 2 * (SIZE - 1) * y + 1],
+                                    wall_entities[2 * x + 2 * (board.size - 1) * y + 1],
                                 ),
                             ))
                             .observe(show_wall::<Pointer<Over>>())
                             .observe(hide_wall::<Pointer<Out>>());
                     };
                     // RU
-                    if y > 0 && x < SIZE - 1 {
+                    if y > 0 && x < board.size - 1 {
                         parent
                             .spawn((
-                                Mesh2d(
-                                    meshes
-                                        .add(Rectangle::new(sqr_offset - sqr_size, sqr_size / 2.)),
-                                ),
+                                Mesh2d(meshes.add(Rectangle::new(
+                                    board.offset_size - board.tile_size,
+                                    board.tile_size / 2.,
+                                ))),
                                 Transform::from_translation(Vec3::new(
-                                    sqr_offset * (x as f32 - mid) + sqr_offset / 2.,
-                                    sqr_offset * (mid - y as f32) + sqr_size / 4.,
+                                    board.offset_size * (x as f32 - board.mid as f32)
+                                        + board.offset_size / 2.,
+                                    board.offset_size * (board.mid as f32 - y as f32)
+                                        + board.tile_size / 4.,
                                     0.,
                                 )),
                                 Pickable::default(),
                                 SquareGapId::new(
-                                    id,
+                                    SHAPE.get_id(x, y).expect("TODO failed"),
                                     SquareGapLocation::RU,
-                                    wall_entities[2 * x + 2 * (SIZE - 1) * (y - 1)],
+                                    wall_entities[2 * x + 2 * (board.size - 1) * (y - 1)],
                                 ),
                             ))
                             .observe(show_wall::<Pointer<Over>>())
                             .observe(hide_wall::<Pointer<Out>>());
                     };
                     // DL
-                    if y < SIZE - 1 && x > 0 {
+                    if y < board.size - 1 && x > 0 {
                         parent
                             .spawn((
-                                Mesh2d(
-                                    meshes
-                                        .add(Rectangle::new(sqr_size / 2., sqr_offset - sqr_size)),
-                                ),
+                                Mesh2d(meshes.add(Rectangle::new(
+                                    board.tile_size / 2.,
+                                    board.offset_size - board.tile_size,
+                                ))),
                                 Transform::from_translation(Vec3::new(
-                                    sqr_offset * (x as f32 - mid) - sqr_size / 4.,
-                                    sqr_offset * (mid - y as f32) - sqr_offset / 2.,
+                                    board.offset_size * (x as f32 - board.mid as f32)
+                                        - board.tile_size / 4.,
+                                    board.offset_size * (board.mid as f32 - y as f32)
+                                        - board.offset_size / 2.,
                                     0.,
                                 )),
                                 Pickable::default(),
                                 SquareGapId::new(
-                                    id,
+                                    SHAPE.get_id(x, y).expect("TODO failed"),
                                     SquareGapLocation::DL,
-                                    wall_entities[2 * x + 2 * (SIZE - 1) * y - 1],
+                                    wall_entities[2 * x + 2 * (board.size - 1) * y - 1],
                                 ),
                             ))
                             .observe(show_wall::<Pointer<Over>>())
@@ -236,21 +225,26 @@ pub fn setup_square(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, th
                 }
             }
             parent.spawn((
-                Mesh2d(meshes.add(Circle::new(sqr_size / 2.))),
-                transform_from_position(mid as usize, 0, sqr_offset, mid),
+                Mesh2d(meshes.add(Circle::new(board.tile_size / 2.))),
+                transform_from_position(board.mid, 0, board.offset_size, board.mid),
                 Pickable::default(),
                 MeshMaterial2d(theme.foe.normal.clone()),
-                GridLocation::new(mid as usize, 0),
+                GridLocation::new(board.mid, 0),
                 Id(4),
                 Foe,
             ));
             parent
                 .spawn((
-                    Mesh2d(meshes.add(Circle::new(sqr_size / 2.))),
-                    transform_from_position(mid as usize, SIZE - 1, sqr_offset, mid),
+                    Mesh2d(meshes.add(Circle::new(board.tile_size / 2.))),
+                    transform_from_position(
+                        board.mid,
+                        board.size - 1,
+                        board.offset_size,
+                        board.mid,
+                    ),
                     Pickable::default(),
                     MeshMaterial2d(theme.own.normal.clone()),
-                    GridLocation::new(mid as usize, SIZE - 1),
+                    GridLocation::new(board.mid, board.size - 1),
                     Id(76),
                     Own,
                 ))
@@ -266,10 +260,10 @@ fn cleanup_square(mut commands: Commands, square_data: Res<SquareData>) {
     commands.entity(square_data.square_entity).despawn();
 }
 
-fn transform_from_position(x: usize, y: usize, sqr_offset: f32, mid: f32) -> Transform {
+fn transform_from_position(x: usize, y: usize, offset_size: f32, mid: usize) -> Transform {
     Transform::from_translation(Vec3::new(
-        sqr_offset * (x as f32 - mid),
-        sqr_offset * (mid - y as f32),
+        offset_size * (x as f32 - mid as f32),
+        offset_size * (mid as f32 - y as f32),
         0.,
     ))
 }
