@@ -109,3 +109,97 @@ impl WallBundle {
         }
     }
 }
+
+#[derive(Bundle)]
+pub struct SquareGapBundle {
+    gap_id: SquareGapId,
+    mesh: Mesh2d,
+    pickable: Pickable,
+    transform: Transform,
+}
+
+impl SquareGapBundle {
+    pub fn new(
+        meshes: &mut ResMut<'_, Assets<Mesh>>,
+        shape: Shape,
+        x: usize,
+        y: usize,
+        gap: SquareGapLocation,
+        wall_entities: &[Entity],
+    ) -> Self {
+        let board: BoardParameters = shape.into();
+
+        let mesh = Mesh2d(meshes.add(Rectangle::new(
+            board.tile_size / 2.,
+            board.offset_size - board.tile_size,
+        )));
+
+        let parent = shape.get_id(x, y).expect("Failed to spawn gap");
+        let gap_id = match gap {
+            SquareGapLocation::RU => SquareGapId::new(
+                parent,
+                SquareGapLocation::RU,
+                wall_entities[2 * x + 2 * (board.size - 1) * (y - 1)],
+            ),
+            SquareGapLocation::DR => SquareGapId::new(
+                parent,
+                SquareGapLocation::DR,
+                wall_entities[2 * x + 2 * (board.size - 1) * y + 1],
+            ),
+            SquareGapLocation::DL => SquareGapId::new(
+                parent,
+                SquareGapLocation::DL,
+                wall_entities[2 * x + 2 * (board.size - 1) * y - 1],
+            ),
+            SquareGapLocation::RD => SquareGapId::new(
+                parent,
+                SquareGapLocation::RD,
+                wall_entities[2 * x + 2 * (board.size - 1) * y],
+            ),
+        };
+
+        let transform = match gap {
+            SquareGapLocation::RU => Transform {
+                translation: Vec3::new(
+                    board.offset_size * (x as f32 - board.mid as f32) + board.offset_size / 2.,
+                    board.offset_size * (board.mid as f32 - y as f32) + board.tile_size / 4.,
+                    0.,
+                ),
+                rotation: Quat::from_rotation_z(std::f32::consts::FRAC_PI_2),
+                ..Default::default()
+            },
+            SquareGapLocation::RD => Transform {
+                translation: Vec3::new(
+                    board.offset_size * (x as f32 - board.mid as f32) + board.offset_size / 2.,
+                    board.offset_size * (board.mid as f32 - y as f32) - board.tile_size / 4.,
+                    0.,
+                ),
+                rotation: Quat::from_rotation_z(std::f32::consts::FRAC_PI_2),
+                ..Default::default()
+            },
+            SquareGapLocation::DL => Transform {
+                translation: Vec3::new(
+                    board.offset_size * (x as f32 - board.mid as f32) - board.tile_size / 4.,
+                    board.offset_size * (board.mid as f32 - y as f32) - board.offset_size / 2.,
+                    0.,
+                ),
+                ..Default::default()
+            },
+            SquareGapLocation::DR => Transform {
+                translation: Vec3::new(
+                    board.offset_size * (x as f32 - board.mid as f32) + board.tile_size / 4.,
+                    board.offset_size * (board.mid as f32 - y as f32) - board.offset_size / 2.,
+                    0.,
+                ),
+                ..Default::default()
+            },
+        };
+
+        Self {
+            mesh,
+            transform,
+            pickable: Pickable::default(),
+            gap_id,
+        }
+    }
+}

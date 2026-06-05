@@ -5,7 +5,7 @@ use crate::{
     exit_menu::ExitMenuState,
     game_logic::{
         BoardParameters, Edges, Shape, SquareWall,
-        bundles::{TileBundle, WallBundle},
+        bundles::{SquareGapBundle, TileBundle, WallBundle},
         components::{Foe, GridLocation, Id, Own, SquareGapId, SquareGapLocation, Wall},
         observers::{OwnMovement, PointerInteraction},
         systems::update_reachable_tiles,
@@ -98,7 +98,6 @@ pub fn setup_square(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, th
                         .with_pointer_interaction()
                         .with_move_own();
 
-                    // RD
                     if y < board.size - 1 && x < board.size - 1 {
                         wall_entities.push(
                             parent
@@ -113,29 +112,17 @@ pub fn setup_square(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, th
                                 .id(),
                         );
                         parent
-                            .spawn((
-                                Mesh2d(meshes.add(Rectangle::new(
-                                    board.offset_size - board.tile_size,
-                                    board.tile_size / 2.,
-                                ))),
-                                Transform::from_translation(Vec3::new(
-                                    board.offset_size * (x as f32 - board.mid as f32)
-                                        + board.offset_size / 2.,
-                                    board.offset_size * (board.mid as f32 - y as f32)
-                                        - board.tile_size / 4.,
-                                    0.,
-                                )),
-                                Pickable::default(),
-                                SquareGapId::new(
-                                    SHAPE.get_id(x, y).expect("TODO failed"),
-                                    SquareGapLocation::RD,
-                                    wall_entities[2 * x + 2 * (board.size - 1) * y],
-                                ),
+                            .spawn(SquareGapBundle::new(
+                                &mut meshes,
+                                SHAPE,
+                                x,
+                                y,
+                                SquareGapLocation::RD,
+                                &wall_entities,
                             ))
                             .observe(show_wall::<Pointer<Over>>())
                             .observe(hide_wall::<Pointer<Out>>());
                     };
-                    // DR
                     if y < board.size - 1 && x < board.size - 1 {
                         wall_entities.push(
                             parent
@@ -150,74 +137,39 @@ pub fn setup_square(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, th
                                 .id(),
                         );
                         parent
-                            .spawn((
-                                Mesh2d(meshes.add(Rectangle::new(
-                                    board.tile_size / 2.,
-                                    board.offset_size - board.tile_size,
-                                ))),
-                                Transform::from_translation(Vec3::new(
-                                    board.offset_size * (x as f32 - board.mid as f32)
-                                        + board.tile_size / 4.,
-                                    board.offset_size * (board.mid as f32 - y as f32)
-                                        - board.offset_size / 2.,
-                                    0.,
-                                )),
-                                Pickable::default(),
-                                SquareGapId::new(
-                                    SHAPE.get_id(x, y).expect("TODO failed"),
-                                    SquareGapLocation::DR,
-                                    wall_entities[2 * x + 2 * (board.size - 1) * y + 1],
-                                ),
+                            .spawn(SquareGapBundle::new(
+                                &mut meshes,
+                                SHAPE,
+                                x,
+                                y,
+                                SquareGapLocation::DR,
+                                &wall_entities,
                             ))
                             .observe(show_wall::<Pointer<Over>>())
                             .observe(hide_wall::<Pointer<Out>>());
                     };
-                    // RU
                     if y > 0 && x < board.size - 1 {
                         parent
-                            .spawn((
-                                Mesh2d(meshes.add(Rectangle::new(
-                                    board.offset_size - board.tile_size,
-                                    board.tile_size / 2.,
-                                ))),
-                                Transform::from_translation(Vec3::new(
-                                    board.offset_size * (x as f32 - board.mid as f32)
-                                        + board.offset_size / 2.,
-                                    board.offset_size * (board.mid as f32 - y as f32)
-                                        + board.tile_size / 4.,
-                                    0.,
-                                )),
-                                Pickable::default(),
-                                SquareGapId::new(
-                                    SHAPE.get_id(x, y).expect("TODO failed"),
-                                    SquareGapLocation::RU,
-                                    wall_entities[2 * x + 2 * (board.size - 1) * (y - 1)],
-                                ),
+                            .spawn(SquareGapBundle::new(
+                                &mut meshes,
+                                SHAPE,
+                                x,
+                                y,
+                                SquareGapLocation::RU,
+                                &wall_entities,
                             ))
                             .observe(show_wall::<Pointer<Over>>())
                             .observe(hide_wall::<Pointer<Out>>());
                     };
-                    // DL
                     if y < board.size - 1 && x > 0 {
                         parent
-                            .spawn((
-                                Mesh2d(meshes.add(Rectangle::new(
-                                    board.tile_size / 2.,
-                                    board.offset_size - board.tile_size,
-                                ))),
-                                Transform::from_translation(Vec3::new(
-                                    board.offset_size * (x as f32 - board.mid as f32)
-                                        - board.tile_size / 4.,
-                                    board.offset_size * (board.mid as f32 - y as f32)
-                                        - board.offset_size / 2.,
-                                    0.,
-                                )),
-                                Pickable::default(),
-                                SquareGapId::new(
-                                    SHAPE.get_id(x, y).expect("TODO failed"),
-                                    SquareGapLocation::DL,
-                                    wall_entities[2 * x + 2 * (board.size - 1) * y - 1],
-                                ),
+                            .spawn(SquareGapBundle::new(
+                                &mut meshes,
+                                SHAPE,
+                                x,
+                                y,
+                                SquareGapLocation::DL,
+                                &wall_entities,
                             ))
                             .observe(show_wall::<Pointer<Over>>())
                             .observe(hide_wall::<Pointer<Out>>());
