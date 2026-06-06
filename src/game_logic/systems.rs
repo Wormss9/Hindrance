@@ -1,6 +1,9 @@
 use crate::{
     colors::Theme,
-    game_logic::{Edges, components::{Foe, Id, Interactable, Own, Pointable, Tile}},
+    game_logic::{
+        Edges, WallCount,
+        components::{CounterText, Foe, Id, Interactable, Own, Pointable, Tile},
+    },
 };
 use bevy::prelude::*;
 
@@ -55,5 +58,21 @@ pub fn clean_reachable_tiles(
     for (mut material, mut interactable) in &mut query {
         material.0 = theme.tile.normal.clone();
         interactable.0 = false;
+    }
+}
+
+pub fn update_counter_text(counter: Res<WallCount>, mut query: Query<(&mut Text2d, &CounterText)>) {
+    if !counter.is_changed() {
+        return;
+    }
+    for (mut text, counter_side) in &mut query {
+        match counter_side {
+            CounterText::OWN => {
+                *text = Text2d::new(counter.own.to_string());
+            }
+            CounterText::FOE => {
+                *text = Text2d::new(counter.foe.to_string());
+            }
+        }
     }
 }

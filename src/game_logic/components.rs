@@ -65,3 +65,9 @@ pub enum Wall {
     Square(SquareWall),
     Triangle(TriangleWall),
 }
+
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum CounterText {
+    OWN,
+    FOE,
+}

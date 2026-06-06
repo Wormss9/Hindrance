@@ -1,5 +1,5 @@
 use crate::game_logic::{
-    BoardParameters, Edges, Shape,
+    BoardParameters, Edges, Shape, WallCount,
     components::{Id, Interactable, Own, Pointable, SquareGap, Tile, Wall},
 };
 use bevy::prelude::*;
@@ -99,6 +99,7 @@ pub fn place_wall(
     Query<&SquareGap>,
     Query<(Entity, &SquareGap)>,
     Query<(Entity, &Id), With<Wall>>,
+    ResMut<WallCount>,
     ResMut<Edges>,
 ) {
     move |event: On<Pointer<Release>>,
@@ -106,18 +107,14 @@ pub fn place_wall(
           this_gap: Query<&SquareGap>,
           gap_query: Query<(Entity, &SquareGap)>,
           wall_query: Query<(Entity, &Id), With<Wall>>,
-          edges_query: ResMut<Edges>| {
+          wall_count: ResMut<WallCount>,
+          edges: ResMut<Edges>| {
         let target = event.event_target();
         let this_gap = this_gap.get(target).expect("Failed to get clicked gap!");
         let board: BoardParameters = shape.into();
         let wall = this_gap.parent;
         add_wall(
-            wall,
-            board.size,
-            commands,
-            wall_query,
-            gap_query,
-            edges_query,
+            wall, board.size, commands, wall_query, gap_query, wall_count, edges,
         );
     }
 }
@@ -128,8 +125,12 @@ fn add_wall(
     mut commands: Commands,
     wall_query: Query<(Entity, &Id), With<Wall>>,
     gap_query: Query<(Entity, &SquareGap)>,
+    mut wall_count: ResMut<WallCount>,
     mut edges: ResMut<Edges>,
 ) {
+    if wall_count.own == 0 {
+        return;
+    }
     let mut walls = Vec::with_capacity(3);
     let wall_size = (size - 1) * 2;
     walls.push(wall);
@@ -177,4 +178,5 @@ fn add_wall(
         edges.remove_edge(tile_id, tile_bellow_id);
         edges.remove_edge(tile_id + 1, tile_bellow_id + 1);
     };
+    wall_count.own -= 1;
 }

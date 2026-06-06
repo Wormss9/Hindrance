@@ -35,15 +35,15 @@ pub struct Theme {
 impl Theme {
     pub fn new(materials: &mut Mut<Assets<ColorMaterial>>) -> Self {
         Self {
-            own: ColorSet::new(materials, Color::srgb(0.4, 0.2, 1.0), 0.5),
-            foe: ColorSet::new(materials, Color::srgb(0.5, 1.0, 0.5), 0.5),
-            tile: ColorSet::new(materials, Color::srgb(1., 1., 1.), 0.3),
+            own: ColorSet::new(materials, Color::srgb(0.51, 0.286, 0.882), 0.7),
+            foe: ColorSet::new(materials, Color::srgb(0.659, 0.882, 0.286), 0.9),
+            tile: ColorSet::new(materials, Color::srgb(1., 1., 1.), 0.2),
             reachable_tile: ColorSet::new(materials, Color::srgb(0.4, 0.3, 0.5), 0.3),
             own_tile: ColorSet::new(materials, Color::srgb(0.7, 0.2, 1.0), 0.3),
             fore_tile: ColorSet::new(materials, Color::srgb(0.5, 1.0, 0.5), 0.3),
-            misc: ColorSet::new(materials, Color::srgb(0.8, 0.8, 0.2), 0.5),
-            wall: ColorSet::new(materials, Color::srgb(0.2, 0.2, 1.0), 0.5),
-            exit: ColorSet::new(materials, Color::srgb(1.0, 0.2, 0.2), 0.5),
+            misc: ColorSet::new(materials, Color::srgb(0.8, 0.8, 0.2), 0.7),
+            wall: ColorSet::new(materials, Color::srgb(0.882, 0.51, 0.286), 0.7),
+            exit: ColorSet::new(materials, Color::srgb(1.0, 0.2, 0.2), 0.7),
             curtain: ColorSet::dark(materials, Color::srgba(0.0, 0.0, 0.0, 0.9)),
         }
     }

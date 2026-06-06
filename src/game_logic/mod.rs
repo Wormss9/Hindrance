@@ -209,10 +209,9 @@ impl Edges {
         reachable
     }
     pub fn remove_edge(&mut self, a: usize, b: usize) {
-    self.edges[a].retain(|&x| x != b);
-    self.edges[b].retain(|&x| x != a);
-}
-
+        self.edges[a].retain(|&x| x != b);
+        self.edges[b].retain(|&x| x != a);
+    }
 }
 
 fn front_skip(x: usize, y: usize, size: usize) -> bool {
@@ -234,4 +233,16 @@ pub enum TriangleWall {
     Down,
     UpRight,
     DownRight,
+}
+
+#[derive(Resource)]
+pub struct WallCount {
+    pub own: usize,
+    pub foe: usize,
+}
+
+impl WallCount {
+    pub fn new(max: usize) -> Self {
+        Self { own: max, foe: max }
+    }
 }
