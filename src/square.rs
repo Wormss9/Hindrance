@@ -6,8 +6,8 @@ use crate::{
     game_logic::{
         BoardParameters, Edges, Shape, SquareWall,
         bundles::{SquareGapBundle, TileBundle, WallBundle},
-        components::{Foe, GridLocation, Id, Own, SquareGapId, SquareGapLocation, Wall},
-        observers::{OwnMovement, PointerInteraction},
+        components::{Foe, GridLocation, Id, Own, SquareGapPosition, Wall},
+        observers::{PointerInteraction, hide_wall, move_own, place_wall, show_wall},
         systems::update_reachable_tiles,
     },
     main_menu::GameState,
@@ -26,33 +26,6 @@ impl Plugin for SquarePlugin {
                 Update,
                 update_reachable_tiles.run_if(in_state(GameState::Square)),
             );
-    }
-}
-
-fn show_wall<E: EntityEvent>() -> impl Fn(On<E>, Query<&SquareGapId>, Query<&mut Visibility>) {
-    move |event, gap_query, mut visibility_query| {
-        let hovered_entity = event.event_target();
-
-        let Ok(gap) = gap_query.get(hovered_entity) else {
-            return;
-        };
-
-        if let Ok(mut visibility) = visibility_query.get_mut(gap.wall) {
-            *visibility = Visibility::Visible;
-        }
-    }
-}
-fn hide_wall<E: EntityEvent>() -> impl Fn(On<E>, Query<&SquareGapId>, Query<&mut Visibility>) {
-    move |event, gap_query, mut visibility_query| {
-        let hovered_entity = event.event_target();
-
-        let Ok(gap) = gap_query.get(hovered_entity) else {
-            return;
-        };
-
-        if let Ok(mut visibility) = visibility_query.get_mut(gap.wall) {
-            *visibility = Visibility::Hidden;
-        }
     }
 }
 
@@ -96,33 +69,8 @@ pub fn setup_square(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, th
                     parent
                         .spawn(TileBundle::new(&mut meshes, &theme, x, y, SHAPE))
                         .with_pointer_interaction()
-                        .with_move_own();
+                        .observe(move_own);
 
-                    if y < board.size - 1 && x < board.size - 1 {
-                        wall_entities.push(
-                            parent
-                                .spawn(WallBundle::new(
-                                    &mut meshes,
-                                    &theme,
-                                    x,
-                                    y,
-                                    SHAPE,
-                                    Wall::Square(SquareWall::Down),
-                                ))
-                                .id(),
-                        );
-                        parent
-                            .spawn(SquareGapBundle::new(
-                                &mut meshes,
-                                SHAPE,
-                                x,
-                                y,
-                                SquareGapLocation::RD,
-                                &wall_entities,
-                            ))
-                            .observe(show_wall::<Pointer<Over>>())
-                            .observe(hide_wall::<Pointer<Out>>());
-                    };
                     if y < board.size - 1 && x < board.size - 1 {
                         wall_entities.push(
                             parent
@@ -142,11 +90,38 @@ pub fn setup_square(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, th
                                 SHAPE,
                                 x,
                                 y,
-                                SquareGapLocation::DR,
+                                SquareGapPosition::RD,
                                 &wall_entities,
                             ))
-                            .observe(show_wall::<Pointer<Over>>())
-                            .observe(hide_wall::<Pointer<Out>>());
+                            .observe(show_wall)
+                            .observe(hide_wall)
+                            .observe(place_wall(SHAPE));
+                    };
+                    if y < board.size - 1 && x < board.size - 1 {
+                        wall_entities.push(
+                            parent
+                                .spawn(WallBundle::new(
+                                    &mut meshes,
+                                    &theme,
+                                    x,
+                                    y,
+                                    SHAPE,
+                                    Wall::Square(SquareWall::Down),
+                                ))
+                                .id(),
+                        );
+                        parent
+                            .spawn(SquareGapBundle::new(
+                                &mut meshes,
+                                SHAPE,
+                                x,
+                                y,
+                                SquareGapPosition::DR,
+                                &wall_entities,
+                            ))
+                            .observe(show_wall)
+                            .observe(hide_wall)
+                            .observe(place_wall(SHAPE));
                     };
                     if y > 0 && x < board.size - 1 {
                         parent
@@ -155,11 +130,12 @@ pub fn setup_square(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, th
                                 SHAPE,
                                 x,
                                 y,
-                                SquareGapLocation::RU,
+                                SquareGapPosition::RU,
                                 &wall_entities,
                             ))
-                            .observe(show_wall::<Pointer<Over>>())
-                            .observe(hide_wall::<Pointer<Out>>());
+                            .observe(show_wall)
+                            .observe(hide_wall)
+                            .observe(place_wall(SHAPE));
                     };
                     if y < board.size - 1 && x > 0 {
                         parent
@@ -168,11 +144,12 @@ pub fn setup_square(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, th
                                 SHAPE,
                                 x,
                                 y,
-                                SquareGapLocation::DL,
+                                SquareGapPosition::DL,
                                 &wall_entities,
                             ))
-                            .observe(show_wall::<Pointer<Over>>())
-                            .observe(hide_wall::<Pointer<Out>>());
+                            .observe(show_wall)
+                            .observe(hide_wall)
+                            .observe(place_wall(SHAPE));
                     };
                 }
             }
@@ -200,8 +177,8 @@ pub fn setup_square(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, th
                     Id(76),
                     Own,
                 ))
-                .observe(show_wall::<Pointer<Over>>())
-                .observe(hide_wall::<Pointer<Out>>());
+                .observe(show_wall)
+                .observe(hide_wall);
         })
         .id();
 

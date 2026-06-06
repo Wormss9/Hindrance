@@ -208,6 +208,11 @@ impl Edges {
 
         reachable
     }
+    pub fn remove_edge(&mut self, a: usize, b: usize) {
+    self.edges[a].retain(|&x| x != b);
+    self.edges[b].retain(|&x| x != a);
+}
+
 }
 
 fn front_skip(x: usize, y: usize, size: usize) -> bool {

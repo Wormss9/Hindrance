@@ -30,25 +30,25 @@ impl GridLocation {
 }
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct SquareGapId {
+pub struct SquareGap {
     pub parent: usize,
-    pub location: SquareGapLocation,
+    pub relative_position: SquareGapPosition,
     pub wall: Entity,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum SquareGapLocation {
+pub enum SquareGapPosition {
     RU,
     RD,
     DL,
     DR,
 }
 
-impl SquareGapId {
-    pub fn new(parent: usize, location: SquareGapLocation, wall: Entity) -> Self {
+impl SquareGap {
+    pub fn new(parent: usize, relative_position: SquareGapPosition, wall: Entity) -> Self {
         Self {
             parent,
-            location,
+            relative_position,
             wall,
         }
     }

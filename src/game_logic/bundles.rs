@@ -93,9 +93,16 @@ impl WallBundle {
             },
         };
 
+        let id = match wall {
+            Wall::Square(square_wall) => match square_wall {
+                SquareWall::Right => x * 2 + y * 2 * (params.size - 1),
+                SquareWall::Down => x * 2 + y * 2 * (params.size - 1) + 1,
+            },
+            Wall::Triangle(triangle_wall) => todo!(),
+        };
         let mesh = Mesh2d(meshes.add(Rectangle::new(
-            params.gap_size,
             params.tile_size * 2. + params.gap_size,
+            params.gap_size,
         )));
 
         Self {
@@ -104,7 +111,7 @@ impl WallBundle {
             visibility: Visibility::Hidden,
             pickable: Pickable::IGNORE,
             transform,
-            id: Id(shape.get_id(x, y).expect("Wall spawning failed")),
+            id: Id(id),
             wall,
         }
     }
@@ -112,7 +119,7 @@ impl WallBundle {
 
 #[derive(Bundle)]
 pub struct SquareGapBundle {
-    gap_id: SquareGapId,
+    gap_id: SquareGap,
     mesh: Mesh2d,
     pickable: Pickable,
     transform: Transform,
@@ -124,7 +131,7 @@ impl SquareGapBundle {
         shape: Shape,
         x: usize,
         y: usize,
-        gap: SquareGapLocation,
+        gap: SquareGapPosition,
         wall_entities: &[Entity],
     ) -> Self {
         let board: BoardParameters = shape.into();
@@ -134,32 +141,31 @@ impl SquareGapBundle {
             board.offset_size - board.tile_size,
         )));
 
-        let parent = shape.get_id(x, y).expect("Failed to spawn gap");
         let gap_id = match gap {
-            SquareGapLocation::RU => SquareGapId::new(
-                parent,
-                SquareGapLocation::RU,
+            SquareGapPosition::RU => SquareGap::new(
+                2 * x + 2 * (board.size - 1) * (y - 1),
+                SquareGapPosition::RU,
                 wall_entities[2 * x + 2 * (board.size - 1) * (y - 1)],
             ),
-            SquareGapLocation::DR => SquareGapId::new(
-                parent,
-                SquareGapLocation::DR,
+            SquareGapPosition::DR => SquareGap::new(
+                2 * x + 2 * (board.size - 1) * y + 1,
+                SquareGapPosition::DR,
                 wall_entities[2 * x + 2 * (board.size - 1) * y + 1],
             ),
-            SquareGapLocation::DL => SquareGapId::new(
-                parent,
-                SquareGapLocation::DL,
+            SquareGapPosition::DL => SquareGap::new(
+                2 * x + 2 * (board.size - 1) * y - 1,
+                SquareGapPosition::DL,
                 wall_entities[2 * x + 2 * (board.size - 1) * y - 1],
             ),
-            SquareGapLocation::RD => SquareGapId::new(
-                parent,
-                SquareGapLocation::RD,
+            SquareGapPosition::RD => SquareGap::new(
+                2 * x + 2 * (board.size - 1) * y,
+                SquareGapPosition::RD,
                 wall_entities[2 * x + 2 * (board.size - 1) * y],
             ),
         };
 
         let transform = match gap {
-            SquareGapLocation::RU => Transform {
+            SquareGapPosition::RU => Transform {
                 translation: Vec3::new(
                     board.offset_size * (x as f32 - board.mid as f32) + board.offset_size / 2.,
                     board.offset_size * (board.mid as f32 - y as f32) + board.tile_size / 4.,
@@ -168,7 +174,7 @@ impl SquareGapBundle {
                 rotation: Quat::from_rotation_z(std::f32::consts::FRAC_PI_2),
                 ..Default::default()
             },
-            SquareGapLocation::RD => Transform {
+            SquareGapPosition::RD => Transform {
                 translation: Vec3::new(
                     board.offset_size * (x as f32 - board.mid as f32) + board.offset_size / 2.,
                     board.offset_size * (board.mid as f32 - y as f32) - board.tile_size / 4.,
@@ -177,7 +183,7 @@ impl SquareGapBundle {
                 rotation: Quat::from_rotation_z(std::f32::consts::FRAC_PI_2),
                 ..Default::default()
             },
-            SquareGapLocation::DL => Transform {
+            SquareGapPosition::DL => Transform {
                 translation: Vec3::new(
                     board.offset_size * (x as f32 - board.mid as f32) - board.tile_size / 4.,
                     board.offset_size * (board.mid as f32 - y as f32) - board.offset_size / 2.,
@@ -185,7 +191,7 @@ impl SquareGapBundle {
                 ),
                 ..Default::default()
             },
-            SquareGapLocation::DR => Transform {
+            SquareGapPosition::DR => Transform {
                 translation: Vec3::new(
                     board.offset_size * (x as f32 - board.mid as f32) + board.tile_size / 4.,
                     board.offset_size * (board.mid as f32 - y as f32) - board.offset_size / 2.,
