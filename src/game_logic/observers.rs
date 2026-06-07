@@ -1,5 +1,5 @@
 use crate::game_logic::{
-    BoardParameters, Edges, Shape, WallCount,
+    Board, Edges, WallCount,
     components::{Id, Interactable, Own, Pointable, SquareGap, Tile, Wall},
 };
 use bevy::prelude::*;
@@ -95,7 +95,7 @@ pub fn move_own(
 
 #[allow(clippy::type_complexity)]
 pub fn place_wall(
-    shape: Shape,
+    board: Board,
 ) -> impl FnMut(
     On<Pointer<Release>>,
     Commands,
@@ -114,7 +114,6 @@ pub fn place_wall(
           edges: ResMut<Edges>| {
         let target = event.event_target();
         let this_gap = this_gap.get(target).expect("Failed to get clicked gap!");
-        let board: BoardParameters = shape.into();
         let wall = this_gap.parent;
         add_wall(
             wall, board.size, commands, wall_query, gap_query, wall_count, edges,

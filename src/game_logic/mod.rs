@@ -11,30 +11,31 @@ const TRIANGLE_SIZE: usize = 4;
 const TILE_SIZE: f32 = 60.;
 const GAP_SIZE: f32 = 15.;
 
-const SQUARE_BOARD: BoardParameters = BoardParameters {
-    size: SQUARE_SIZE,
-    tile_size: TILE_SIZE,
-    gap_size: GAP_SIZE,
-};
-
-const TRIANGLE_BOARD: BoardParameters = BoardParameters {
-    size: TRIANGLE_SIZE,
-    tile_size: TILE_SIZE,
-    gap_size: GAP_SIZE,
-};
-
-#[derive(Resource, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub enum Shape {
     Square,
     Triangle,
 }
 
-impl Shape {
+impl Board {
+    pub const SQUARE_BOARD: Board = Board {
+        size: SQUARE_SIZE,
+        tile_size: TILE_SIZE,
+        gap_size: GAP_SIZE,
+        shape: Shape::Square,
+    };
+
+    pub const TRIANGLE_BOARD: Board = Board {
+        size: TRIANGLE_SIZE,
+        tile_size: TILE_SIZE,
+        gap_size: GAP_SIZE,
+        shape: Shape::Triangle,
+    };
     pub fn get_tile_id(self, x: usize, y: usize) -> Option<usize> {
-        let params: BoardParameters = self.into();
+        let params: Board = self.into();
         let size = params.size;
 
-        match self {
+        match self.shape {
             Shape::Square => {
                 if x >= size || y >= size {
                     return None;
@@ -60,9 +61,9 @@ impl Shape {
         }
     }
     pub fn into_tile_transform(self, x: usize, y: usize) -> Transform {
-        let board: BoardParameters = self.into();
+        let board: Board = self.into();
         let (mid_x, mid_y) = self.get_mids();
-        match self {
+        match self.shape {
             Shape::Square => Transform::from_translation(Vec3::new(
                 self.get_x_offset() * (x as f32 - mid_x as f32),
                 self.get_y_offset() * (mid_y as f32 - y as f32),
@@ -99,8 +100,8 @@ impl Shape {
         }
     }
     pub fn grid_dimentions(self) -> (usize, usize) {
-        let board: BoardParameters = self.into();
-        match self {
+        let board: Board = self.into();
+        match self.shape {
             Shape::Square => (board.size, board.size),
             Shape::Triangle => (board.size * 4, board.size * 2),
         }
@@ -110,40 +111,34 @@ impl Shape {
         (x / 2, y / 2)
     }
     pub fn get_x_offset(self) -> f32 {
-        let board: BoardParameters = self.into();
+        let board: Board = self.into();
         let x_offset_correction = board.gap_size * (3.0_f32).sqrt() / 2.0;
-        match self {
+        match self.shape {
             Shape::Square => board.tile_size + board.gap_size,
             Shape::Triangle => board.tile_size / 2. + x_offset_correction,
         }
     }
     pub fn get_y_offset(self) -> f32 {
-        let board: BoardParameters = self.into();
-        match self {
+        let board: Board = self.into();
+        match self.shape {
             Shape::Square => board.tile_size + board.gap_size,
             Shape::Triangle => (3.0_f32).sqrt() / 2.0 * board.tile_size + board.gap_size * 1.5,
         }
     }
 }
 
-impl From<Shape> for BoardParameters {
-    fn from(value: Shape) -> Self {
-        match value {
-            Shape::Square => SQUARE_BOARD,
-            Shape::Triangle => TRIANGLE_BOARD,
-        }
-    }
-}
-impl From<Shape> for Edges {
-    fn from(value: Shape) -> Self {
+impl From<Board> for Edges {
+    fn from(value: Board) -> Self {
         Edges::new(value)
     }
 }
 
-pub struct BoardParameters {
+#[derive(Resource, Clone, Copy)]
+pub struct Board {
     pub size: usize,
     pub tile_size: f32,
     pub gap_size: f32,
+    pub shape: Shape,
 }
 
 #[derive(Resource)]
@@ -152,14 +147,14 @@ pub struct Edges {
 }
 
 impl Edges {
-    fn new(shape: Shape) -> Self {
-        match shape {
-            Shape::Square => Self::square(Shape::Square),
-            Shape::Triangle => Self::triangle(Shape::Triangle),
+    fn new(board: Board) -> Self {
+        match board.shape {
+            Shape::Square => Self::square(board),
+            Shape::Triangle => Self::triangle(board),
         }
     }
-    fn square(shape: Shape) -> Self {
-        let size = Into::<BoardParameters>::into(shape).size;
+    fn square(board: Board) -> Self {
+        let size = board.size;
         let max = size * size;
 
         let mut edges = vec![Vec::with_capacity(4); max];
@@ -184,35 +179,34 @@ impl Edges {
 
         Self { edges }
     }
-    fn triangle(shape: Shape) -> Self {
-        let board: BoardParameters = shape.into();
+    fn triangle(board: Board) -> Self {
         let size = board.size;
         let max = 6 * size * size;
         let mut edges = vec![Vec::with_capacity(3); max];
         for y in 0..size * 2 {
             for x in 0..size * 4 {
-                match shape.get_tile_id(x, y) {
+                match board.get_tile_id(x, y) {
                     Some(current) => {
                         if x > 0
-                            && let Some(right) = shape.get_tile_id(x - 1, y)
+                            && let Some(right) = board.get_tile_id(x - 1, y)
                         {
                             edges[current].push(right);
                         }
                         if x < size * 4 - 1
-                            && let Some(left) = shape.get_tile_id(x + 1, y)
+                            && let Some(left) = board.get_tile_id(x + 1, y)
                         {
                             edges[current].push(left);
                         }
                         if x % 2 == 0 {
                             if y > 0
                                 && let Some(top) =
-                                    shape.get_tile_id(if y < size { x - 1 } else { x + 1 }, y - 1)
+                                    board.get_tile_id(if y < size { x - 1 } else { x + 1 }, y - 1)
                             {
                                 edges[current].push(top);
                             }
                         } else if y < size * 2
                             && let Some(bottom) =
-                                shape.get_tile_id(if y < size { x - 1 } else { x + 1 }, y + 1)
+                                board.get_tile_id(if y < size { x - 1 } else { x + 1 }, y + 1)
                         {
                             edges[current].push(bottom);
                         }
@@ -251,6 +245,12 @@ fn front_skip(x: usize, y: usize, size: usize) -> bool {
 
 fn back_skip(x: usize, y: usize, size: usize) -> bool {
     y >= size && x > 6 * size - 2 * y - 2
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum WallPosition {
+    SquareWall(SquareWall),
+    TriangleWall(TriangleWall),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

@@ -1,6 +1,6 @@
 use crate::{
     colors::Theme,
-    game_logic::{BoardParameters, Shape, SquareWall, TriangleWall},
+    game_logic::{Board, Shape, SquareWall, TriangleWall},
 };
 
 use super::components::*;
@@ -24,10 +24,9 @@ impl TileBundle {
         theme: &Theme,
         x: usize,
         y: usize,
-        shape: Shape,
+        board: Board,
     ) -> Self {
-        let board: BoardParameters = shape.into();
-        let mesh = match shape {
+        let mesh = match board.shape {
             Shape::Square => Mesh2d(meshes.add(Rectangle::new(board.tile_size, board.tile_size))),
             Shape::Triangle => {
                 Mesh2d(meshes.add(Triangle2d::new(
@@ -46,9 +45,9 @@ impl TileBundle {
                 )))
             }
         };
-        let transform = shape.into_tile_transform(x, y);
+        let transform = board.into_tile_transform(x, y);
         Self {
-            id: Id(shape.get_tile_id(x, y).expect("Board spawning failed!")),
+            id: Id(board.get_tile_id(x, y).expect("Board spawning failed!")),
             interactable: Interactable(false),
             mesh,
             mesh_material: MeshMaterial2d(theme.tile.normal.clone()),
@@ -77,14 +76,13 @@ impl WallBundle {
         theme: &Theme,
         x: usize,
         y: usize,
-        shape: Shape,
+        board: Board,
         wall: Wall,
     ) -> Self {
-        let params: BoardParameters = shape.into();
-        let (mid_x,mid_y) = shape.get_mids();
+        let (mid_x,mid_y) = board.get_mids();
         let translation = Vec3::new(
-            shape.get_x_offset() * (x as f32 - mid_x as f32) + shape.get_x_offset() / 2.,
-            shape.get_y_offset() * (mid_y as f32 - y as f32) - shape.get_y_offset() / 2.,
+            board.get_x_offset() * (x as f32 - mid_x as f32) + board.get_x_offset() / 2.,
+            board.get_y_offset() * (mid_y as f32 - y as f32) - board.get_y_offset() / 2.,
             0.,
         );
         let bottom_transform = Transform::from_translation(translation);
@@ -106,14 +104,14 @@ impl WallBundle {
 
         let id = match wall {
             Wall::Square(square_wall) => match square_wall {
-                SquareWall::Right => x * 2 + y * 2 * (params.size - 1),
-                SquareWall::Down => x * 2 + y * 2 * (params.size - 1) + 1,
+                SquareWall::Right => x * 2 + y * 2 * (board.size - 1),
+                SquareWall::Down => x * 2 + y * 2 * (board.size - 1) + 1,
             },
             Wall::Triangle(triangle_wall) => todo!(),
         };
         let mesh = Mesh2d(meshes.add(Rectangle::new(
-            params.tile_size * 2. + params.gap_size,
-            params.gap_size,
+            board.tile_size * 2. + board.gap_size,
+            board.gap_size,
         )));
 
         Self {
@@ -139,17 +137,15 @@ pub struct SquareGapBundle {
 impl SquareGapBundle {
     pub fn new(
         meshes: &mut ResMut<'_, Assets<Mesh>>,
-        shape: Shape,
+        board: Board,
         x: usize,
         y: usize,
         gap: SquareGapPosition,
         wall_entities: &[Entity],
     ) -> Self {
-        let board: BoardParameters = shape.into();
-
         let mesh = Mesh2d(meshes.add(Rectangle::new(
             board.tile_size / 2.,
-            shape.get_y_offset() - board.tile_size,
+            board.get_y_offset() - board.tile_size,
         )));
 
         let gap_id = match gap {
@@ -174,14 +170,14 @@ impl SquareGapBundle {
                 wall_entities[2 * x + 2 * (board.size - 1) * y],
             ),
         };
-        let (mid_x,mid_y)=shape.get_mids();
+        let (mid_x,mid_y)=board.get_mids();
         let transform = match gap {
             SquareGapPosition::RU => Transform {
                 translation: Vec3::new(
-                    shape.get_x_offset() * (x as f32 - mid_x as f32)
-                        + shape.get_x_offset() / 2.,
-                    shape.get_y_offset() * (mid_y as f32 - y as f32)
-                        + shape.get_y_offset() / 4.,
+                    board.get_x_offset() * (x as f32 - mid_x as f32)
+                        + board.get_x_offset() / 2.,
+                    board.get_y_offset() * (mid_y as f32 - y as f32)
+                        + board.get_y_offset() / 4.,
                     0.,
                 ),
                 rotation: Quat::from_rotation_z(std::f32::consts::FRAC_PI_2),
@@ -189,10 +185,10 @@ impl SquareGapBundle {
             },
             SquareGapPosition::RD => Transform {
                 translation: Vec3::new(
-                    shape.get_x_offset() * (x as f32 - mid_x as f32)
-                        + shape.get_x_offset() / 2.,
-                    shape.get_y_offset() * (mid_y as f32 - y as f32)
-                        - shape.get_y_offset() / 4.,
+                    board.get_x_offset() * (x as f32 - mid_x as f32)
+                        + board.get_x_offset() / 2.,
+                    board.get_y_offset() * (mid_y as f32 - y as f32)
+                        - board.get_y_offset() / 4.,
                     0.,
                 ),
                 rotation: Quat::from_rotation_z(std::f32::consts::FRAC_PI_2),
@@ -200,20 +196,20 @@ impl SquareGapBundle {
             },
             SquareGapPosition::DL => Transform {
                 translation: Vec3::new(
-                    shape.get_x_offset() * (x as f32 - mid_x as f32)
-                        - shape.get_x_offset() / 4.,
-                    shape.get_y_offset() * (mid_y as f32 - y as f32)
-                        - shape.get_y_offset() / 2.,
+                    board.get_x_offset() * (x as f32 - mid_x as f32)
+                        - board.get_x_offset() / 4.,
+                    board.get_y_offset() * (mid_y as f32 - y as f32)
+                        - board.get_y_offset() / 2.,
                     0.,
                 ),
                 ..Default::default()
             },
             SquareGapPosition::DR => Transform {
                 translation: Vec3::new(
-                    shape.get_x_offset() * (x as f32 - mid_x as f32)
-                        + shape.get_x_offset() / 4.,
-                    shape.get_y_offset() * (mid_y as f32 - y as f32)
-                        - shape.get_y_offset() / 2.,
+                    board.get_x_offset() * (x as f32 - mid_x as f32)
+                        + board.get_x_offset() / 4.,
+                    board.get_y_offset() * (mid_y as f32 - y as f32)
+                        - board.get_y_offset() / 2.,
                     0.,
                 ),
                 ..Default::default()

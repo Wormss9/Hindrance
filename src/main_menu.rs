@@ -6,7 +6,7 @@ use bevy::{
 
 use crate::{
     colors::{PointerColorInteraction, Theme},
-    game_logic::Shape,
+    game_logic::Board,
     shapes::{arrow_mesh, cross_mesh},
 };
 
@@ -67,7 +67,7 @@ pub fn setup_main_menu(
                     |_: On<Pointer<Release>>,
                      mut next_state: ResMut<NextState<GameState>>,
                      mut commands: Commands| {
-                        commands.insert_resource(Shape::Square);
+                        commands.insert_resource(Board::SQUARE_BOARD);
                         next_state.set(GameState::InGame);
                     },
                 );
@@ -82,7 +82,7 @@ pub fn setup_main_menu(
                     |_: On<Pointer<Release>>,
                      mut next_state: ResMut<NextState<GameState>>,
                      mut commands: Commands| {
-                        commands.insert_resource(Shape::Triangle);
+                        commands.insert_resource(Board::TRIANGLE_BOARD);
                         next_state.set(GameState::InGame);
                     },
                 );

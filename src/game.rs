@@ -4,7 +4,7 @@ use crate::{
     colors::{PointerColorInteraction, Theme},
     exit_menu::ExitMenuState,
     game_logic::{
-        BoardParameters, Edges, Shape, SquareWall, WallCount,
+        Board, Edges, SquareWall, WallCount,
         bundles::{SquareGapBundle, TileBundle, WallBundle},
         components::{CounterText, Foe, GridLocation, Id, Own, SquareGapPosition, Wall},
         observers::{PointerInteraction, hide_wall, move_own, place_wall, show_wall},
@@ -18,7 +18,7 @@ pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameState::InGame), setup_square)
+        app.add_systems(OnEnter(GameState::InGame), setup_game)
             .add_systems(OnExit(GameState::InGame), cleanup_square);
         // .add_systems(
         //     Update,
@@ -34,24 +34,23 @@ impl Plugin for GamePlugin {
 }
 
 #[derive(Resource)]
-struct SquareData {
+struct GameData {
     square_entity: Entity,
 }
 
-pub fn setup_square(
+pub fn setup_game(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     materials: Res<Assets<ColorMaterial>>,
     theme: Res<Theme>,
-    shape: Res<Shape>,
+    board: Res<Board>,
 ) {
-    let shape = *shape;
-    commands.insert_resource(Into::<Edges>::into(shape));
+    let board = *board;
+    commands.insert_resource(Into::<Edges>::into(board));
     commands.insert_resource(WallCount::new(10));
     let square_entity = commands
         .spawn((Transform::default(), Visibility::Visible))
         .with_children(|parent| {
-            let board: BoardParameters = shape.into();
             //Exit arrow
             // parent
             //     .spawn((
@@ -106,15 +105,15 @@ pub fn setup_square(
 
             let mut wall_entities = Vec::with_capacity((board.size - 1) * (board.size - 1) * 2);
 
-            let (x_size, y_size) = shape.grid_dimentions();
+            let (x_size, y_size) = board.grid_dimentions();
 
             for y in 0..y_size {
                 for x in 0..x_size {
-                    if shape.get_tile_id(x, y).is_none() {
+                    if board.get_tile_id(x, y).is_none() {
                         continue;
                     }
                     parent
-                        .spawn(TileBundle::new(&mut meshes, &theme, x, y, shape))
+                        .spawn(TileBundle::new(&mut meshes, &theme, x, y, board))
                         .with_pointer_interaction()
                         .observe(move_own);
 
@@ -126,7 +125,7 @@ pub fn setup_square(
                                     &theme,
                                     x,
                                     y,
-                                    shape,
+                                    board,
                                     Wall::Square(SquareWall::Right),
                                 ))
                                 .id(),
@@ -227,10 +226,10 @@ pub fn setup_square(
         })
         .id();
 
-    commands.insert_resource(SquareData { square_entity });
+    commands.insert_resource(GameData { square_entity });
 }
 
-fn cleanup_square(mut commands: Commands, square_data: Res<SquareData>) {
+fn cleanup_square(mut commands: Commands, square_data: Res<GameData>) {
     commands.remove_resource::<Edges>();
     commands.remove_resource::<WallCount>();
     commands.entity(square_data.square_entity).despawn();
