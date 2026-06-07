@@ -77,7 +77,7 @@ pub fn setup_main_menu(
                     Transform::from_translation(Vec3::new(0., 50., 0.)),
                     Pickable::default(),
                 ))
-                .with_color_set(&theme.foe)
+                .with_color_set(&theme.foe1)
                 .observe(
                     |_: On<Pointer<Release>>,
                      mut next_state: ResMut<NextState<GameState>>,

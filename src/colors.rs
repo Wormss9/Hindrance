@@ -21,11 +21,13 @@ pub fn add_colors(mut commands: Commands, mut materials: Mut<Assets<ColorMateria
 #[derive(Resource)]
 pub struct Theme {
     pub own: ColorSet,
-    pub foe: ColorSet,
+    pub foe1: ColorSet,
+    pub foe2: ColorSet,
     pub tile: ColorSet,
     pub reachable_tile: ColorSet,
     pub own_tile: ColorSet,
-    pub fore_tile: ColorSet,
+    pub foe1_tile: ColorSet,
+    pub foe2_tile: ColorSet,
     pub misc: ColorSet,
     pub wall: ColorSet,
     pub exit: ColorSet,
@@ -33,16 +35,24 @@ pub struct Theme {
 }
 
 impl Theme {
+    #[allow(clippy::approx_constant)]
     pub fn new(materials: &mut Mut<Assets<ColorMaterial>>) -> Self {
+        let own = Color::srgb(0.518, 0.318, 0.851);
+        let foe1 = Color::srgb(0.651, 0.851, 0.318);
+        let foe2 = Color::srgb(0.318, 0.651, 0.851);
+        let wall: Color = Color::srgb(0.851, 0.518, 0.318);
+
         Self {
-            own: ColorSet::new(materials, Color::srgb(0.51, 0.286, 0.882), 0.7),
-            foe: ColorSet::new(materials, Color::srgb(0.659, 0.882, 0.286), 0.9),
+            own: ColorSet::new(materials, own, 0.7),
+            foe1: ColorSet::new(materials, foe1, 0.9),
+            foe2: ColorSet::new(materials, foe2, 0.9),
             tile: ColorSet::new(materials, Color::srgb(1., 1., 1.), 0.2),
-            reachable_tile: ColorSet::new(materials, Color::srgb(0.4, 0.3, 0.5), 0.3),
-            own_tile: ColorSet::new(materials, Color::srgb(0.7, 0.2, 1.0), 0.3),
-            fore_tile: ColorSet::new(materials, Color::srgb(0.5, 1.0, 0.5), 0.3),
+            reachable_tile: ColorSet::new(materials, own, 0.5),
+            own_tile: ColorSet::new(materials, own, 0.3),
+            foe1_tile: ColorSet::new(materials, foe1, 0.3),
+            foe2_tile: ColorSet::new(materials, foe2, 0.3),
             misc: ColorSet::new(materials, Color::srgb(0.8, 0.8, 0.2), 0.7),
-            wall: ColorSet::new(materials, Color::srgb(0.882, 0.51, 0.286), 0.7),
+            wall: ColorSet::new(materials, wall, 0.7),
             exit: ColorSet::new(materials, Color::srgb(1.0, 0.2, 0.2), 0.7),
             curtain: ColorSet::dark(materials, Color::srgba(0.0, 0.0, 0.0, 0.9)),
         }

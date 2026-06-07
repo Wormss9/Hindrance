@@ -7,38 +7,30 @@ use bevy::ecs::resource::Resource;
 use bevy::prelude::*;
 
 const SQUARE_SIZE: usize = 9;
-const TRIANGLE_SIZE: usize = 9;
+const TRIANGLE_SIZE: usize = 4;
 const TILE_SIZE: f32 = 60.;
 const GAP_SIZE: f32 = 15.;
 
-pub const SQUARE: Shape = Shape::Square;
-pub const TRIANGLE: Shape = Shape::Triangle;
-pub const SQUARE_BOARD: BoardParameters = BoardParameters {
+const SQUARE_BOARD: BoardParameters = BoardParameters {
     size: SQUARE_SIZE,
-    mid: SQUARE_SIZE / 2,
     tile_size: TILE_SIZE,
     gap_size: GAP_SIZE,
-    offset_size: TILE_SIZE + GAP_SIZE,
-    shape: Shape::Square,
 };
 
-pub const TRIANGLE_BOARD: BoardParameters = BoardParameters {
+const TRIANGLE_BOARD: BoardParameters = BoardParameters {
     size: TRIANGLE_SIZE,
-    mid: TRIANGLE_SIZE / 2,
     tile_size: TILE_SIZE,
     gap_size: GAP_SIZE,
-    offset_size: TILE_SIZE + GAP_SIZE,
-    shape: Shape::Triangle,
 };
 
-#[derive(Resource,Clone, Copy)]
+#[derive(Resource, Clone, Copy)]
 pub enum Shape {
     Square,
     Triangle,
 }
 
 impl Shape {
-    pub fn get_id(self, x: usize, y: usize) -> Option<usize> {
+    pub fn get_tile_id(self, x: usize, y: usize) -> Option<usize> {
         let params: BoardParameters = self.into();
         let size = params.size;
 
@@ -67,6 +59,71 @@ impl Shape {
             }
         }
     }
+    pub fn into_tile_transform(self, x: usize, y: usize) -> Transform {
+        let board: BoardParameters = self.into();
+        let (mid_x, mid_y) = self.get_mids();
+        match self {
+            Shape::Square => Transform::from_translation(Vec3::new(
+                self.get_x_offset() * (x as f32 - mid_x as f32),
+                self.get_y_offset() * (mid_y as f32 - y as f32),
+                0.,
+            )),
+            Shape::Triangle => {
+                let points_downwards = (self
+                    .get_tile_id(x, y)
+                    .expect(&format!("Failed to spawn tile {} {}", x, y))
+                    + y)
+                    .is_multiple_of(2)
+                    ^ (y >= board.size);
+                let angle = match points_downwards {
+                    true => 0.,
+                    false => std::f32::consts::PI,
+                };
+                let (mid_x, mid_y) = self.get_mids();
+                let row_offset = (y as f32 - mid_y as f32) * (self.get_x_offset());
+                let y_shift = match points_downwards {
+                    true => -board.gap_size / 2.,
+                    false => 0.,
+                };
+                //TODO shift rows
+                Transform {
+                    translation: Vec3 {
+                        x: self.get_x_offset() * (x as f32 - mid_x as f32) + row_offset,
+                        y: self.get_y_offset() * (mid_y as f32 - y as f32) + y_shift,
+                        z: 0.,
+                    },
+                    rotation: Quat::from_rotation_z(angle),
+                    ..Default::default()
+                }
+            }
+        }
+    }
+    pub fn grid_dimentions(self) -> (usize, usize) {
+        let board: BoardParameters = self.into();
+        match self {
+            Shape::Square => (board.size, board.size),
+            Shape::Triangle => (board.size * 4, board.size * 2),
+        }
+    }
+    pub fn get_mids(self) -> (usize, usize) {
+        let (x, y) = self.grid_dimentions();
+        (x / 2, y / 2)
+    }
+    pub fn get_x_offset(self) -> f32 {
+        let board: BoardParameters = self.into();
+        let x_offset_correction = board.gap_size * (3.0_f32).sqrt() / 2.0;
+        match self {
+            Shape::Square => board.tile_size + board.gap_size,
+            Shape::Triangle => board.tile_size / 2. + x_offset_correction,
+        }
+    }
+    pub fn get_y_offset(self) -> f32 {
+        let board: BoardParameters = self.into();
+        match self {
+            Shape::Square => board.tile_size + board.gap_size,
+            Shape::Triangle => (3.0_f32).sqrt() / 2.0 * board.tile_size + board.gap_size * 1.5,
+        }
+    }
 }
 
 impl From<Shape> for BoardParameters {
@@ -77,27 +134,16 @@ impl From<Shape> for BoardParameters {
         }
     }
 }
+impl From<Shape> for Edges {
+    fn from(value: Shape) -> Self {
+        Edges::new(value)
+    }
+}
 
 pub struct BoardParameters {
     pub size: usize,
-    pub mid: usize,
     pub tile_size: f32,
     pub gap_size: f32,
-    pub offset_size: f32,
-    shape: Shape,
-}
-
-impl BoardParameters {
-    pub fn transform_from_coordinates(&self, x: usize, y: usize) -> Transform {
-        match self.shape {
-            Shape::Square => Transform::from_translation(Vec3::new(
-                self.offset_size * (x as f32 - self.mid as f32),
-                self.offset_size * (self.mid as f32 - y as f32),
-                0.,
-            )),
-            Shape::Triangle => todo!(),
-        }
-    }
 }
 
 #[derive(Resource)]
@@ -106,14 +152,14 @@ pub struct Edges {
 }
 
 impl Edges {
-    pub fn new(shape: Shape) -> Self {
+    fn new(shape: Shape) -> Self {
         match shape {
             Shape::Square => Self::square(Shape::Square),
-            Shape::Triangle => Self::triangle_hex(Shape::Triangle),
+            Shape::Triangle => Self::triangle(Shape::Triangle),
         }
     }
     fn square(shape: Shape) -> Self {
-        let size = <Shape as std::convert::Into<BoardParameters>>::into(shape).size;
+        let size = Into::<BoardParameters>::into(shape).size;
         let max = size * size;
 
         let mut edges = vec![Vec::with_capacity(4); max];
@@ -136,39 +182,37 @@ impl Edges {
             }
         }
 
-        Self {
-            edges,
-        }
+        Self { edges }
     }
-    fn triangle_hex(shape: Shape) -> Self {
-        let board:BoardParameters = shape.into();
+    fn triangle(shape: Shape) -> Self {
+        let board: BoardParameters = shape.into();
         let size = board.size;
         let max = 6 * size * size;
         let mut edges = vec![Vec::with_capacity(3); max];
         for y in 0..size * 2 {
             for x in 0..size * 4 {
-                match shape.get_id(x, y) {
+                match shape.get_tile_id(x, y) {
                     Some(current) => {
                         if x > 0
-                            && let Some(right) = shape.get_id(x - 1, y)
+                            && let Some(right) = shape.get_tile_id(x - 1, y)
                         {
                             edges[current].push(right);
                         }
                         if x < size * 4 - 1
-                            && let Some(left) = shape.get_id(x + 1, y)
+                            && let Some(left) = shape.get_tile_id(x + 1, y)
                         {
                             edges[current].push(left);
                         }
                         if x % 2 == 0 {
                             if y > 0
                                 && let Some(top) =
-                                    shape.get_id(if y < size { x - 1 } else { x + 1 }, y - 1)
+                                    shape.get_tile_id(if y < size { x - 1 } else { x + 1 }, y - 1)
                             {
                                 edges[current].push(top);
                             }
                         } else if y < size * 2
                             && let Some(bottom) =
-                                shape.get_id(if y < size { x - 1 } else { x + 1 }, y + 1)
+                                shape.get_tile_id(if y < size { x - 1 } else { x + 1 }, y + 1)
                         {
                             edges[current].push(bottom);
                         }
@@ -178,16 +222,14 @@ impl Edges {
             }
         }
 
-        Self {
-            edges,
-        }
+        Self { edges }
     }
+
     pub fn reachable_from(&self, own_id: usize, foe_id: usize) -> Vec<usize> {
         let mut reachable = self.edges[own_id].clone();
 
         if reachable.contains(&foe_id) {
             reachable.retain(|&x| x != foe_id);
-
             for &location in &self.edges[foe_id] {
                 if location != own_id {
                     reachable.push(location);
