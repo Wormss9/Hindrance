@@ -29,20 +29,7 @@ impl TileBundle {
         let mesh = match board.shape {
             Shape::Square => Mesh2d(meshes.add(Rectangle::new(board.tile_size, board.tile_size))),
             Shape::Triangle => {
-                Mesh2d(meshes.add(Triangle2d::new(
-                    vec2(
-                        -board.tile_size / 2.,
-                        -(3.0_f32).sqrt() / 4.0 * board.tile_size,
-                    ),
-                    vec2(
-                        board.tile_size / 2.,
-                        -(3.0_f32).sqrt() / 4.0 * board.tile_size,
-                    ),
-                    vec2(
-                        0.,
-                        (3.0_f32).sqrt() / 4.0 * board.tile_size,
-                    ),
-                )))
+                Mesh2d(meshes.add(RegularPolygon::new(board.tile_size / (3.0_f32).sqrt(), 3)))
             }
         };
         let transform = board.into_tile_transform(x, y);
@@ -66,7 +53,7 @@ pub struct WallBundle {
     visibility: Visibility,
     pickable: Pickable,
     transform: Transform,
-    id: Id,
+    wall_id: Id,
     wall: Wall,
 }
 
@@ -79,38 +66,54 @@ impl WallBundle {
         board: Board,
         wall: Wall,
     ) -> Self {
-        let (mid_x,mid_y) = board.get_mids();
-        let translation = Vec3::new(
+        let (mid_x, mid_y) = board.get_mids();
+        let square_translation = Vec3::new(
             board.get_x_offset() * (x as f32 - mid_x as f32) + board.get_x_offset() / 2.,
             board.get_y_offset() * (mid_y as f32 - y as f32) - board.get_y_offset() / 2.,
             0.,
         );
-        let bottom_transform = Transform::from_translation(translation);
+        let triangle_transform = board.into_tile_transform(x, y).translation
+            + Vec3 {
+                x: 0.,
+                y: -board.tile_size * (3.0_f32).sqrt() / 3.0
+                    - board.get_triangle_rotation_offset() / 2.
+                    - board.gap_size / 2.,
+                z: 0.,
+            };
         let transform = match wall {
             Wall::Square(square_wall) => match square_wall {
                 SquareWall::Right => Transform {
-                    translation,
+                    translation: square_translation,
                     rotation: Quat::from_rotation_z(std::f32::consts::FRAC_PI_2),
                     ..default()
                 },
-                SquareWall::Down => bottom_transform,
+                SquareWall::Down => Transform::from_translation(square_translation),
             },
-            Wall::Triangle(triangle_wall) => match triangle_wall {
-                TriangleWall::Down => bottom_transform,
-                TriangleWall::UpRight => todo!(),
-                TriangleWall::DownRight => todo!(),
-            },
-        };
 
-        let id = match wall {
-            Wall::Square(square_wall) => match square_wall {
-                SquareWall::Right => x * 2 + y * 2 * (board.size - 1),
-                SquareWall::Down => x * 2 + y * 2 * (board.size - 1) + 1,
+            Wall::Triangle(triangle_wall) => match triangle_wall {
+                TriangleWall::Down => Transform {
+                    translation: triangle_transform,
+                    ..default()
+                },
+                TriangleWall::UpRight => Transform {
+                    translation: triangle_transform,
+                    rotation: Quat::from_rotation_z(-std::f32::consts::FRAC_PI_3),
+                    ..default()
+                },
+                TriangleWall::DownRight => Transform {
+                    translation: triangle_transform,
+                    rotation: Quat::from_rotation_z(std::f32::consts::FRAC_PI_3),
+                    ..default()
+                },
             },
-            Wall::Triangle(triangle_wall) => todo!(),
         };
+        let id = board.get_tile_id(x, y).expect("Failed to spawn wall");
         let mesh = Mesh2d(meshes.add(Rectangle::new(
-            board.tile_size * 2. + board.gap_size,
+            board.tile_size * 2.
+                + match board.shape {
+                    Shape::Square => board.gap_size,
+                    Shape::Triangle => board.gap_size * (3.0_f32).sqrt(),
+                },
             board.gap_size,
         )));
 
@@ -120,7 +123,7 @@ impl WallBundle {
             visibility: Visibility::Hidden,
             pickable: Pickable::IGNORE,
             transform,
-            id: Id(id),
+            wall_id: Id(id),
             wall,
         }
     }
@@ -170,14 +173,12 @@ impl SquareGapBundle {
                 wall_entities[2 * x + 2 * (board.size - 1) * y],
             ),
         };
-        let (mid_x,mid_y)=board.get_mids();
+        let (mid_x, mid_y) = board.get_mids();
         let transform = match gap {
             SquareGapPosition::RU => Transform {
                 translation: Vec3::new(
-                    board.get_x_offset() * (x as f32 - mid_x as f32)
-                        + board.get_x_offset() / 2.,
-                    board.get_y_offset() * (mid_y as f32 - y as f32)
-                        + board.get_y_offset() / 4.,
+                    board.get_x_offset() * (x as f32 - mid_x as f32) + board.get_x_offset() / 2.,
+                    board.get_y_offset() * (mid_y as f32 - y as f32) + board.get_y_offset() / 4.,
                     0.,
                 ),
                 rotation: Quat::from_rotation_z(std::f32::consts::FRAC_PI_2),
@@ -185,10 +186,8 @@ impl SquareGapBundle {
             },
             SquareGapPosition::RD => Transform {
                 translation: Vec3::new(
-                    board.get_x_offset() * (x as f32 - mid_x as f32)
-                        + board.get_x_offset() / 2.,
-                    board.get_y_offset() * (mid_y as f32 - y as f32)
-                        - board.get_y_offset() / 4.,
+                    board.get_x_offset() * (x as f32 - mid_x as f32) + board.get_x_offset() / 2.,
+                    board.get_y_offset() * (mid_y as f32 - y as f32) - board.get_y_offset() / 4.,
                     0.,
                 ),
                 rotation: Quat::from_rotation_z(std::f32::consts::FRAC_PI_2),
@@ -196,20 +195,16 @@ impl SquareGapBundle {
             },
             SquareGapPosition::DL => Transform {
                 translation: Vec3::new(
-                    board.get_x_offset() * (x as f32 - mid_x as f32)
-                        - board.get_x_offset() / 4.,
-                    board.get_y_offset() * (mid_y as f32 - y as f32)
-                        - board.get_y_offset() / 2.,
+                    board.get_x_offset() * (x as f32 - mid_x as f32) - board.get_x_offset() / 4.,
+                    board.get_y_offset() * (mid_y as f32 - y as f32) - board.get_y_offset() / 2.,
                     0.,
                 ),
                 ..Default::default()
             },
             SquareGapPosition::DR => Transform {
                 translation: Vec3::new(
-                    board.get_x_offset() * (x as f32 - mid_x as f32)
-                        + board.get_x_offset() / 4.,
-                    board.get_y_offset() * (mid_y as f32 - y as f32)
-                        - board.get_y_offset() / 2.,
+                    board.get_x_offset() * (x as f32 - mid_x as f32) + board.get_x_offset() / 4.,
+                    board.get_y_offset() * (mid_y as f32 - y as f32) - board.get_y_offset() / 2.,
                     0.,
                 ),
                 ..Default::default()

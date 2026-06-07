@@ -103,7 +103,7 @@ pub fn setup_game(
             //     CounterText::FOE,
             // ));
 
-            let mut wall_entities = Vec::with_capacity((board.size - 1) * (board.size - 1) * 2);
+            // let mut wall_entities = Vec::with_capacity((board.size - 1) * (board.size - 1) * 2);
 
             let (x_size, y_size) = board.grid_dimentions();
 
@@ -117,19 +117,24 @@ pub fn setup_game(
                         .with_pointer_interaction()
                         .observe(move_own);
 
-                    if y < board.size - 1 && x < board.size - 1 {
-                        wall_entities.push(
-                            parent
-                                .spawn(WallBundle::new(
-                                    &mut meshes,
-                                    &theme,
-                                    x,
-                                    y,
-                                    board,
-                                    Wall::Square(SquareWall::Right),
-                                ))
-                                .id(),
-                        );
+                    let mut wall_entities: Vec<(Entity, Wall)> =
+                        Vec::with_capacity(match board.shape {
+                            crate::game_logic::Shape::Square => 2,
+                            crate::game_logic::Shape::Triangle => 3,
+                        });
+
+                    for wall_position in board.get_walls(x, y) {
+                        let wall_entity = parent
+                            .spawn((WallBundle::new(
+                                &mut meshes,
+                                &theme,
+                                x,
+                                y,
+                                board,
+                                wall_position,
+                            ),))
+                            .id();
+                        wall_entities.push((wall_entity, wall_position));
                     }
                 }
             }
@@ -202,27 +207,72 @@ pub fn setup_game(
             //         };
             //     }
             // }
-            // parent.spawn((
-            //     Mesh2d(meshes.add(Circle::new(board.tile_size / 2.))),
-            //     shape.into_tile_transform(board.mid, 0),
-            //     Pickable::default(),
-            //     MeshMaterial2d(theme.foe1.normal.clone()),
-            //     GridLocation::new(board.mid, 0),
-            //     Id(4),
-            //     Foe,
-            // ));
-            // parent
-            //     .spawn((
-            //         Mesh2d(meshes.add(Circle::new(board.tile_size / 2.))),
-            //         shape.into_tile_transform(board.mid, board.size - 1),
-            //         Pickable::default(),
-            //         MeshMaterial2d(theme.own.normal.clone()),
-            //         GridLocation::new(board.mid, board.size - 1),
-            //         Id(76),
-            //         Own,
-            //     ))
-            //     .observe(show_wall)
-            //     .observe(hide_wall);
+            match board.shape {
+                crate::game_logic::Shape::Square => {
+                    let (x, y) = (board.size / 2, 0);
+                    parent.spawn((
+                        Mesh2d(meshes.add(Circle::new(board.tile_size / 2.))),
+                        board.into_tile_transform(x, y),
+                        Pickable::default(),
+                        MeshMaterial2d(theme.foe1.normal.clone()),
+                        GridLocation::new(x, y),
+                        Id(board.get_tile_id(x, y).expect("Failed to spawn foe1")),
+                        Foe,
+                    ));
+                    let (x, y) = (board.size / 2, board.size - 1);
+                    parent
+                        .spawn((
+                            Mesh2d(meshes.add(Circle::new(board.tile_size / 2.))),
+                            board.into_tile_transform(x, y),
+                            Pickable::default(),
+                            MeshMaterial2d(theme.own.normal.clone()),
+                            GridLocation::new(x, y),
+                            Id(board.get_tile_id(x, y).expect("Failed to spawn own")),
+                            Own,
+                        ))
+                        .observe(show_wall)
+                        .observe(hide_wall);
+                }
+                crate::game_logic::Shape::Triangle => {
+                    let (x, y) = (board.size, board.size / 2);
+                    parent.spawn((
+                        Mesh2d(meshes.add(Circle::new(board.tile_size / 3.))),
+                        board.into_tile_transform(x, y),
+                        Pickable::default(),
+                        MeshMaterial2d(theme.foe1.normal.clone()),
+                        GridLocation::new(x, y),
+                        Id(board.get_tile_id(x, y).expect("Failed to spawn foe1")),
+                        Foe,
+                    ));
+                    let gap= match board.size.is_multiple_of(2){
+                        true => {2},
+                        false => {1},
+                    };
+                    let (x, y) = (4 * board.size - gap, board.size / 2);
+                    parent.spawn((
+                        Mesh2d(meshes.add(Circle::new(board.tile_size / 3.))),
+                        board.into_tile_transform(x, y),
+                        Pickable::default(),
+                        MeshMaterial2d(theme.foe2.normal.clone()),
+                        GridLocation::new(x, y),
+                        Id(board.get_tile_id(x, y).expect("Failed to spawn foe2")),
+                        Foe,
+                    ));
+                    let (x, y) = (board.size, 2 * board.size - 1);
+                    parent
+                        .spawn((
+                            Mesh2d(meshes.add(Circle::new(board.tile_size / 3.))),
+                            board.into_tile_transform(x, y),
+                            Pickable::default(),
+                            MeshMaterial2d(theme.own.normal.clone()),
+                            GridLocation::new(x, y),
+                            Id(board.get_tile_id(x, y).expect("Failed to spawn own")),
+                            Own,
+                        ))
+                        .observe(show_wall)
+                        .observe(hide_wall);
+                }
+            }
         })
         .id();
 

@@ -6,6 +6,8 @@ pub mod systems;
 use bevy::ecs::resource::Resource;
 use bevy::prelude::*;
 
+use crate::game_logic::components::Wall;
+
 const SQUARE_SIZE: usize = 9;
 const TRIANGLE_SIZE: usize = 4;
 const TILE_SIZE: f32 = 60.;
@@ -24,7 +26,6 @@ impl Board {
         gap_size: GAP_SIZE,
         shape: Shape::Square,
     };
-
     pub const TRIANGLE_BOARD: Board = Board {
         size: TRIANGLE_SIZE,
         tile_size: TILE_SIZE,
@@ -60,6 +61,9 @@ impl Board {
             }
         }
     }
+    pub fn get_triangle_rotation_offset(self) -> f32 {
+        (3.0_f32).sqrt() * self.tile_size / 6.
+    }
     pub fn into_tile_transform(self, x: usize, y: usize) -> Transform {
         let board: Board = self.into();
         let (mid_x, mid_y) = self.get_mids();
@@ -70,27 +74,27 @@ impl Board {
                 0.,
             )),
             Shape::Triangle => {
-                let points_downwards = (self
-                    .get_tile_id(x, y)
-                    .expect(&format!("Failed to spawn tile {} {}", x, y))
-                    + y)
-                    .is_multiple_of(2)
-                    ^ (y >= board.size);
+                let points_downwards = self.is_rotated_triangle(x, y);
                 let angle = match points_downwards {
                     true => 0.,
                     false => std::f32::consts::PI,
                 };
                 let (mid_x, mid_y) = self.get_mids();
                 let row_offset = (y as f32 - mid_y as f32) * (self.get_x_offset());
+                let rotation_offset = match points_downwards {
+                    true => -self.get_triangle_rotation_offset() / 2.,
+                    false => self.get_triangle_rotation_offset() / 2.,
+                };
                 let y_shift = match points_downwards {
                     true => -board.gap_size / 2.,
                     false => 0.,
                 };
-                //TODO shift rows
                 Transform {
                     translation: Vec3 {
                         x: self.get_x_offset() * (x as f32 - mid_x as f32) + row_offset,
-                        y: self.get_y_offset() * (mid_y as f32 - y as f32) + y_shift,
+                        y: self.get_y_offset() * (mid_y as f32 - y as f32)
+                            + y_shift
+                            + rotation_offset,
                         z: 0.,
                     },
                     rotation: Quat::from_rotation_z(angle),
@@ -124,6 +128,34 @@ impl Board {
             Shape::Square => board.tile_size + board.gap_size,
             Shape::Triangle => (3.0_f32).sqrt() / 2.0 * board.tile_size + board.gap_size * 1.5,
         }
+    }
+    fn is_rotated_triangle(self, x: usize, y: usize) -> bool {
+        (self
+            .get_tile_id(x, y)
+            .expect(&format!("Failed to spawn tile {} {}", x, y))
+            + y)
+            .is_multiple_of(2)
+            ^ (y >= self.size)
+    }
+    pub fn get_walls(self, x: usize, y: usize) -> Vec<Wall> {
+        let mut walls = Vec::new();
+        match self.shape {
+            Shape::Square => {
+                if x < self.size - 1 && y < self.size - 1 {
+                    walls.push(Wall::Square(SquareWall::Down));
+                    walls.push(Wall::Square(SquareWall::Right));
+                }
+            }
+            Shape::Triangle => {
+                let rotated = self.is_rotated_triangle(x, y);
+                if !rotated && x > 0 && self.get_tile_id(x - 1, y + 1).is_some() {
+                    walls.push(Wall::Triangle(TriangleWall::UpRight));
+                    walls.push(Wall::Triangle(TriangleWall::DownRight));
+                    walls.push(Wall::Triangle(TriangleWall::Down));
+                }
+            }
+        }
+        walls
     }
 }
 
@@ -245,12 +277,6 @@ fn front_skip(x: usize, y: usize, size: usize) -> bool {
 
 fn back_skip(x: usize, y: usize, size: usize) -> bool {
     y >= size && x > 6 * size - 2 * y - 2
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum WallPosition {
-    SquareWall(SquareWall),
-    TriangleWall(TriangleWall),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
