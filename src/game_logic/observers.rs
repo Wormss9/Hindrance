@@ -75,6 +75,7 @@ pub fn hide_wall(
         *visibility = Visibility::Hidden;
     }
 }
+#[allow(clippy::type_complexity)]
 pub fn move_own(
     event: On<Pointer<Release>>,
     mut own: Query<(&mut Transform, &mut Id), With<Own>>,
@@ -91,6 +92,8 @@ pub fn move_own(
         own_id.0 = tile_id.0;
     }
 }
+
+#[allow(clippy::type_complexity)]
 pub fn place_wall(
     shape: Shape,
 ) -> impl FnMut(

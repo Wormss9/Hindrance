@@ -31,7 +31,7 @@ pub const TRIANGLE_BOARD: BoardParameters = BoardParameters {
     shape: Shape::Triangle,
 };
 
-#[derive(Clone, Copy)]
+#[derive(Resource,Clone, Copy)]
 pub enum Shape {
     Square,
     Triangle,
@@ -102,21 +102,18 @@ impl BoardParameters {
 
 #[derive(Resource)]
 pub struct Edges {
-    size: usize,
-    shape: Shape,
-    walls: Vec<bool>,
     pub edges: Vec<Vec<usize>>,
 }
 
 impl Edges {
     pub fn new(shape: Shape) -> Self {
-        let params: BoardParameters = shape.into();
         match shape {
-            Shape::Square => Self::square(params.size),
-            Shape::Triangle => Self::triangle_hex(Shape::Triangle, params.size),
+            Shape::Square => Self::square(Shape::Square),
+            Shape::Triangle => Self::triangle_hex(Shape::Triangle),
         }
     }
-    fn square(size: usize) -> Self {
+    fn square(shape: Shape) -> Self {
+        let size = <Shape as std::convert::Into<BoardParameters>>::into(shape).size;
         let max = size * size;
 
         let mut edges = vec![Vec::with_capacity(4); max];
@@ -139,16 +136,13 @@ impl Edges {
             }
         }
 
-        let walls = Vec::with_capacity((size - 1) * (size - 1) * 2);
-
         Self {
             edges,
-            size,
-            walls,
-            shape: Shape::Square,
         }
     }
-    fn triangle_hex(shape: Shape, size: usize) -> Self {
+    fn triangle_hex(shape: Shape) -> Self {
+        let board:BoardParameters = shape.into();
+        let size = board.size;
         let max = 6 * size * size;
         let mut edges = vec![Vec::with_capacity(3); max];
         for y in 0..size * 2 {
@@ -184,13 +178,8 @@ impl Edges {
             }
         }
 
-        let walls = Vec::with_capacity((size - 1) * (size - 1) * 2);
-
         Self {
             edges,
-            size,
-            shape: Shape::Triangle,
-            walls,
         }
     }
     pub fn reachable_from(&self, own_id: usize, foe_id: usize) -> Vec<usize> {

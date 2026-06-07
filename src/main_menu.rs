@@ -6,6 +6,7 @@ use bevy::{
 
 use crate::{
     colors::{PointerColorInteraction, Theme},
+    game_logic::Shape,
     shapes::{arrow_mesh, cross_mesh},
 };
 
@@ -24,8 +25,7 @@ impl Plugin for MainMenuPlugin {
 pub enum GameState {
     #[default]
     MainMenu,
-    Square,
-    Triangle,
+    InGame,
 }
 
 #[derive(Resource)]
@@ -64,8 +64,11 @@ pub fn setup_main_menu(
                 ))
                 .with_color_set(&theme.own)
                 .observe(
-                    |_: On<Pointer<Release>>, mut next_state: ResMut<NextState<GameState>>| {
-                        next_state.set(GameState::Square);
+                    |_: On<Pointer<Release>>,
+                     mut next_state: ResMut<NextState<GameState>>,
+                     mut commands: Commands| {
+                        commands.insert_resource(Shape::Square);
+                        next_state.set(GameState::InGame);
                     },
                 );
             parent
@@ -76,8 +79,11 @@ pub fn setup_main_menu(
                 ))
                 .with_color_set(&theme.foe)
                 .observe(
-                    |_: On<Pointer<Release>>, mut next_state: ResMut<NextState<GameState>>| {
-                        next_state.set(GameState::Triangle);
+                    |_: On<Pointer<Release>>,
+                     mut next_state: ResMut<NextState<GameState>>,
+                     mut commands: Commands| {
+                        commands.insert_resource(Shape::Triangle);
+                        next_state.set(GameState::InGame);
                     },
                 );
             parent

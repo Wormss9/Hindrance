@@ -14,19 +14,22 @@ use crate::{
     shapes::arrow_mesh,
 };
 
-const SHAPE: Shape = Shape::Square;
+pub struct GamePlugin;
 
-pub struct SquarePlugin;
-
-impl Plugin for SquarePlugin {
+impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameState::Square), setup_square)
-            .add_systems(OnExit(GameState::Square), cleanup_square)
+        app.add_systems(OnEnter(GameState::InGame), setup_square)
+            .add_systems(OnExit(GameState::InGame), cleanup_square)
             .add_systems(
                 Update,
-                update_reachable_tiles.run_if(in_state(GameState::Square)),
+                update_reachable_tiles.run_if(in_state(GameState::InGame)),
             )
-            .add_systems(Update, update_counter_text.after(setup_square).run_if(in_state(GameState::Square)));
+            .add_systems(
+                Update,
+                update_counter_text
+                    .after(setup_square)
+                    .run_if(in_state(GameState::InGame)),
+            );
     }
 }
 
@@ -40,13 +43,15 @@ pub fn setup_square(
     mut meshes: ResMut<Assets<Mesh>>,
     materials: Res<Assets<ColorMaterial>>,
     theme: Res<Theme>,
+    shape: Res<Shape>,
 ) {
-    commands.insert_resource(Edges::new(SHAPE));
+    let shape = *shape;
+    commands.insert_resource(Edges::new(shape));
     commands.insert_resource(WallCount::new(10));
     let square_entity = commands
         .spawn((Transform::default(), Visibility::Visible))
         .with_children(|parent| {
-            let board: BoardParameters = SHAPE.into();
+            let board: BoardParameters = shape.into();
             //Exit arrow
             parent
                 .spawn((
@@ -104,7 +109,7 @@ pub fn setup_square(
             for y in 0..board.size {
                 for x in 0..board.size {
                     parent
-                        .spawn(TileBundle::new(&mut meshes, &theme, x, y, SHAPE))
+                        .spawn(TileBundle::new(&mut meshes, &theme, x, y, shape))
                         .with_pointer_interaction()
                         .observe(move_own);
 
@@ -116,7 +121,7 @@ pub fn setup_square(
                                     &theme,
                                     x,
                                     y,
-                                    SHAPE,
+                                    shape,
                                     Wall::Square(SquareWall::Right),
                                 ))
                                 .id(),
@@ -124,7 +129,7 @@ pub fn setup_square(
                         parent
                             .spawn(SquareGapBundle::new(
                                 &mut meshes,
-                                SHAPE,
+                                shape,
                                 x,
                                 y,
                                 SquareGapPosition::RD,
@@ -132,7 +137,7 @@ pub fn setup_square(
                             ))
                             .observe(show_wall)
                             .observe(hide_wall)
-                            .observe(place_wall(SHAPE));
+                            .observe(place_wall(shape));
                     };
                     if y < board.size - 1 && x < board.size - 1 {
                         wall_entities.push(
@@ -142,7 +147,7 @@ pub fn setup_square(
                                     &theme,
                                     x,
                                     y,
-                                    SHAPE,
+                                    shape,
                                     Wall::Square(SquareWall::Down),
                                 ))
                                 .id(),
@@ -150,7 +155,7 @@ pub fn setup_square(
                         parent
                             .spawn(SquareGapBundle::new(
                                 &mut meshes,
-                                SHAPE,
+                                shape,
                                 x,
                                 y,
                                 SquareGapPosition::DR,
@@ -158,13 +163,13 @@ pub fn setup_square(
                             ))
                             .observe(show_wall)
                             .observe(hide_wall)
-                            .observe(place_wall(SHAPE));
+                            .observe(place_wall(shape));
                     };
                     if y > 0 && x < board.size - 1 {
                         parent
                             .spawn(SquareGapBundle::new(
                                 &mut meshes,
-                                SHAPE,
+                                shape,
                                 x,
                                 y,
                                 SquareGapPosition::RU,
@@ -172,13 +177,13 @@ pub fn setup_square(
                             ))
                             .observe(show_wall)
                             .observe(hide_wall)
-                            .observe(place_wall(SHAPE));
+                            .observe(place_wall(shape));
                     };
                     if y < board.size - 1 && x > 0 {
                         parent
                             .spawn(SquareGapBundle::new(
                                 &mut meshes,
-                                SHAPE,
+                                shape,
                                 x,
                                 y,
                                 SquareGapPosition::DL,
@@ -186,7 +191,7 @@ pub fn setup_square(
                             ))
                             .observe(show_wall)
                             .observe(hide_wall)
-                            .observe(place_wall(SHAPE));
+                            .observe(place_wall(shape));
                     };
                 }
             }
