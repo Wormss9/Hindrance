@@ -246,11 +246,6 @@ pub fn setup_game(
             }
         })
         .id();
-    commands.spawn((
-        Mesh2d(meshes.add(Circle::new(board.tile_size / 8.))),
-        Transform::default(),
-        MeshMaterial2d(theme.exit.normal.clone()),
-    ));
     commands.insert_resource(GameData { square_entity });
 }
 
