@@ -1,6 +1,6 @@
 use crate::{
     colors::Theme,
-    game_logic::{Board, Shape, SquareWall, TriangleWall},
+    game_logic::{Board, Shape},
 };
 
 use super::components::*;
@@ -80,32 +80,13 @@ impl WallBundle {
                     - board.gap_size / 2.,
                 z: 0.,
             };
-        let transform = match wall {
-            Wall::Square(square_wall) => match square_wall {
-                SquareWall::Right => Transform {
-                    translation: square_translation,
-                    rotation: Quat::from_rotation_z(std::f32::consts::FRAC_PI_2),
-                    ..default()
-                },
-                SquareWall::Down => Transform::from_translation(square_translation),
+        let transform = Transform {
+            translation: match wall {
+                Wall::Square(_) => square_translation,
+                Wall::Triangle(_) => triangle_transform,
             },
-
-            Wall::Triangle(triangle_wall) => match triangle_wall {
-                TriangleWall::Down => Transform {
-                    translation: triangle_transform,
-                    ..default()
-                },
-                TriangleWall::UpRight => Transform {
-                    translation: triangle_transform,
-                    rotation: Quat::from_rotation_z(-std::f32::consts::FRAC_PI_3),
-                    ..default()
-                },
-                TriangleWall::DownRight => Transform {
-                    translation: triangle_transform,
-                    rotation: Quat::from_rotation_z(std::f32::consts::FRAC_PI_3),
-                    ..default()
-                },
-            },
+            rotation: wall.into(),
+            ..default()
         };
         let id = board.get_tile_id(x, y).expect("Failed to spawn wall");
         let mesh = Mesh2d(meshes.add(Rectangle::new(
@@ -130,92 +111,70 @@ impl WallBundle {
 }
 
 #[derive(Bundle)]
-pub struct SquareGapBundle {
-    gap_id: SquareGap,
+pub struct GapBundle {
+    gap: Gap,
+    id: Id,
+    location: GridLocation,
     mesh: Mesh2d,
     pickable: Pickable,
     transform: Transform,
+    wall: Wall,
 }
 
-impl SquareGapBundle {
+impl GapBundle {
     pub fn new(
         meshes: &mut ResMut<'_, Assets<Mesh>>,
         board: Board,
         x: usize,
         y: usize,
-        gap: SquareGapPosition,
-        wall_entities: &[Entity],
+        wall_entity: Entity,
+        wall: Wall,
+        upper: bool,
     ) -> Self {
-        let mesh = Mesh2d(meshes.add(Rectangle::new(
-            board.tile_size / 2.,
-            board.get_y_offset() - board.tile_size,
-        )));
-
-        let gap_id = match gap {
-            SquareGapPosition::RU => SquareGap::new(
-                2 * x + 2 * (board.size - 1) * (y - 1),
-                SquareGapPosition::RU,
-                wall_entities[2 * x + 2 * (board.size - 1) * (y - 1)],
-            ),
-            SquareGapPosition::DR => SquareGap::new(
-                2 * x + 2 * (board.size - 1) * y + 1,
-                SquareGapPosition::DR,
-                wall_entities[2 * x + 2 * (board.size - 1) * y + 1],
-            ),
-            SquareGapPosition::DL => SquareGap::new(
-                2 * x + 2 * (board.size - 1) * y - 1,
-                SquareGapPosition::DL,
-                wall_entities[2 * x + 2 * (board.size - 1) * y - 1],
-            ),
-            SquareGapPosition::RD => SquareGap::new(
-                2 * x + 2 * (board.size - 1) * y,
-                SquareGapPosition::RD,
-                wall_entities[2 * x + 2 * (board.size - 1) * y],
-            ),
+        let mesh = Mesh2d(meshes.add(Rectangle::new(board.tile_size / 2., board.gap_size)));
+        let rotation: Quat = wall.into();
+        let gap_offset = match wall {
+            Wall::Square(_) => board.gap_size / 2.,
+            Wall::Triangle(_) => board.get_x_offset() - board.tile_size / 2.,
         };
+        let translation = rotation.mul_vec3(Vec3 {
+            x: (gap_offset + board.tile_size / 4.0) * if upper { -1.0 } else { 1.0 },
+            y: 0.,
+            z: 0.,
+        });
+
         let (mid_x, mid_y) = board.get_mids();
-        let transform = match gap {
-            SquareGapPosition::RU => Transform {
-                translation: Vec3::new(
-                    board.get_x_offset() * (x as f32 - mid_x as f32) + board.get_x_offset() / 2.,
-                    board.get_y_offset() * (mid_y as f32 - y as f32) + board.get_y_offset() / 4.,
-                    0.,
-                ),
-                rotation: Quat::from_rotation_z(std::f32::consts::FRAC_PI_2),
-                ..Default::default()
-            },
-            SquareGapPosition::RD => Transform {
-                translation: Vec3::new(
-                    board.get_x_offset() * (x as f32 - mid_x as f32) + board.get_x_offset() / 2.,
-                    board.get_y_offset() * (mid_y as f32 - y as f32) - board.get_y_offset() / 4.,
-                    0.,
-                ),
-                rotation: Quat::from_rotation_z(std::f32::consts::FRAC_PI_2),
-                ..Default::default()
-            },
-            SquareGapPosition::DL => Transform {
-                translation: Vec3::new(
-                    board.get_x_offset() * (x as f32 - mid_x as f32) - board.get_x_offset() / 4.,
-                    board.get_y_offset() * (mid_y as f32 - y as f32) - board.get_y_offset() / 2.,
-                    0.,
-                ),
-                ..Default::default()
-            },
-            SquareGapPosition::DR => Transform {
-                translation: Vec3::new(
-                    board.get_x_offset() * (x as f32 - mid_x as f32) + board.get_x_offset() / 4.,
-                    board.get_y_offset() * (mid_y as f32 - y as f32) - board.get_y_offset() / 2.,
-                    0.,
-                ),
-                ..Default::default()
-            },
+        let square_translation = Vec3::new(
+            board.get_x_offset() * (x as f32 - mid_x as f32) + board.get_x_offset() / 2.,
+            board.get_y_offset() * (mid_y as f32 - y as f32) - board.get_y_offset() / 2.,
+            0.,
+        );
+        let triangle_transform = board.into_tile_transform(x, y).translation
+            + Vec3 {
+                x: 0.,
+                y: -board.tile_size * (3.0_f32).sqrt() / 3.0
+                    - board.get_triangle_rotation_offset() / 2.
+                    - board.gap_size / 2.,
+                z: 0.,
+            };
+        let transform = Transform {
+            translation: translation
+                + match wall {
+                    Wall::Square(_) => square_translation,
+                    Wall::Triangle(_) => triangle_transform,
+                },
+            rotation: wall.into(),
+            ..default()
         };
 
         Self {
+            gap: Gap(wall_entity),
+            id: Id(board.get_tile_id(x, y).expect("Failed to spawn gap")),
+            location: GridLocation { x, y },
             mesh,
-            transform,
             pickable: Pickable::default(),
-            gap_id,
+            transform,
+            wall,
         }
     }
 }

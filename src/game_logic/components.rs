@@ -30,29 +30,7 @@ impl GridLocation {
 }
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct SquareGap {
-    pub parent: usize,
-    pub relative_position: SquareGapPosition,
-    pub wall: Entity,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum SquareGapPosition {
-    RU,
-    RD,
-    DL,
-    DR,
-}
-
-impl SquareGap {
-    pub fn new(parent: usize, relative_position: SquareGapPosition, wall: Entity) -> Self {
-        Self {
-            parent,
-            relative_position,
-            wall,
-        }
-    }
-}
+pub struct Gap(pub Entity);
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Own;
@@ -64,6 +42,15 @@ pub struct Foe;
 pub enum Wall {
     Square(SquareWall),
     Triangle(TriangleWall),
+}
+
+impl From<Wall> for Quat {
+    fn from(value: Wall) -> Quat {
+        match value {
+            Wall::Square(square_wall) => square_wall.into(),
+            Wall::Triangle(triangle_wall) => triangle_wall.into(),
+        }
+    }
 }
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]

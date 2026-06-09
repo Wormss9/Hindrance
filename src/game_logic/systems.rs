@@ -26,11 +26,9 @@ pub fn update_reachable_tiles(
         return;
     };
 
-    let Ok(foe_location) = foe_query.single() else {
-        return;
-    };
+    let foe_locations: Vec<usize> = foe_query.iter().map(|id| id.0).collect();
 
-    let reachable_ids = edges.reachable_from(own_location.0, foe_location.0);
+    let reachable_ids = edges.reachable_from(own_location.0, &foe_locations);
 
     for (mut material, pointable, id, mut interactable) in &mut query {
         let reachable = reachable_ids.contains(&id.0);

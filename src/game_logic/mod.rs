@@ -5,6 +5,7 @@ pub mod systems;
 
 use bevy::ecs::resource::Resource;
 use bevy::prelude::*;
+use strum::EnumIter;
 
 use crate::game_logic::components::Wall;
 
@@ -25,36 +26,38 @@ impl Board {
         tile_size: TILE_SIZE,
         gap_size: GAP_SIZE,
         shape: Shape::Square,
+        max_walls: 10,
     };
     pub const TRIANGLE_BOARD: Board = Board {
         size: TRIANGLE_SIZE,
         tile_size: TILE_SIZE,
         gap_size: GAP_SIZE,
         shape: Shape::Triangle,
+        max_walls: 7,
     };
     pub fn get_tile_id(self, x: usize, y: usize) -> Option<usize> {
-        let params: Board = self.into();
-        let size = params.size;
-
         match self.shape {
             Shape::Square => {
-                if x >= size || y >= size {
+                if x >= self.size || y >= self.size {
                     return None;
                 }
-                Some(y * size + x)
+                Some(y * self.size + x)
             }
             Shape::Triangle => {
-                if x >= size * 4 || y >= size * 2 || front_skip(x, y, size) || back_skip(x, y, size)
+                if x >= self.size * 4
+                    || y >= self.size * 2
+                    || front_skip(x, y, self.size)
+                    || back_skip(x, y, self.size)
                 {
                     return None;
                 }
 
-                let raw = y * size * 4 + x;
+                let raw = y * self.size * 4 + x;
 
-                let gap = if y < size {
-                    (y + 1) * (2 * size - y - 1)
+                let gap = if y < self.size {
+                    (y + 1) * (2 * self.size - y - 1)
                 } else {
-                    size * size + (y - size) * (y - size)
+                    self.size * self.size + (y - self.size) * (y - self.size)
                 };
 
                 Some(raw - gap)
@@ -65,7 +68,6 @@ impl Board {
         (3.0_f32).sqrt() * self.tile_size / 6.
     }
     pub fn into_tile_transform(self, x: usize, y: usize) -> Transform {
-        let board: Board = self.into();
         let (mid_x, mid_y) = self.get_mids();
         match self.shape {
             Shape::Square => Transform::from_translation(Vec3::new(
@@ -86,7 +88,7 @@ impl Board {
                     false => self.get_triangle_rotation_offset() / 2.,
                 };
                 let y_shift = match points_downwards {
-                    true => -board.gap_size / 2.,
+                    true => -self.gap_size / 2.,
                     false => 0.,
                 };
                 Transform {
@@ -104,10 +106,9 @@ impl Board {
         }
     }
     pub fn grid_dimentions(self) -> (usize, usize) {
-        let board: Board = self.into();
         match self.shape {
-            Shape::Square => (board.size, board.size),
-            Shape::Triangle => (board.size * 4, board.size * 2),
+            Shape::Square => (self.size, self.size),
+            Shape::Triangle => (self.size * 4, self.size * 2),
         }
     }
     pub fn get_mids(self) -> (usize, usize) {
@@ -115,24 +116,22 @@ impl Board {
         (x / 2, y / 2)
     }
     pub fn get_x_offset(self) -> f32 {
-        let board: Board = self.into();
-        let x_offset_correction = board.gap_size * (3.0_f32).sqrt() / 2.0;
+        let x_offset_correction = self.gap_size * (3.0_f32).sqrt() / 2.0;
         match self.shape {
-            Shape::Square => board.tile_size + board.gap_size,
-            Shape::Triangle => board.tile_size / 2. + x_offset_correction,
+            Shape::Square => self.tile_size + self.gap_size,
+            Shape::Triangle => self.tile_size / 2. + x_offset_correction,
         }
     }
     pub fn get_y_offset(self) -> f32 {
-        let board: Board = self.into();
         match self.shape {
-            Shape::Square => board.tile_size + board.gap_size,
-            Shape::Triangle => (3.0_f32).sqrt() / 2.0 * board.tile_size + board.gap_size * 1.5,
+            Shape::Square => self.tile_size + self.gap_size,
+            Shape::Triangle => (3.0_f32).sqrt() / 2.0 * self.tile_size + self.gap_size * 1.5,
         }
     }
     fn is_rotated_triangle(self, x: usize, y: usize) -> bool {
         (self
             .get_tile_id(x, y)
-            .expect(&format!("Failed to spawn tile {} {}", x, y))
+            .unwrap_or_else(|| panic!("Failed to spawn tile {} {}", x, y))
             + y)
             .is_multiple_of(2)
             ^ (y >= self.size)
@@ -171,6 +170,7 @@ pub struct Board {
     pub tile_size: f32,
     pub gap_size: f32,
     pub shape: Shape,
+    pub max_walls: usize,
 }
 
 #[derive(Resource)]
@@ -215,6 +215,7 @@ impl Edges {
         let size = board.size;
         let max = 6 * size * size;
         let mut edges = vec![Vec::with_capacity(3); max];
+        let (x_size, y_size) = board.grid_dimentions();
         for y in 0..size * 2 {
             for x in 0..size * 4 {
                 match board.get_tile_id(x, y) {
@@ -224,21 +225,19 @@ impl Edges {
                         {
                             edges[current].push(right);
                         }
-                        if x < size * 4 - 1
+                        if x < x_size - 1
                             && let Some(left) = board.get_tile_id(x + 1, y)
                         {
                             edges[current].push(left);
                         }
-                        if x % 2 == 0 {
+                        if !board.is_rotated_triangle(x, y) {
                             if y > 0
-                                && let Some(top) =
-                                    board.get_tile_id(if y < size { x - 1 } else { x + 1 }, y - 1)
+                                && let Some(top) = board.get_tile_id(x + 1, y - 1)
                             {
                                 edges[current].push(top);
                             }
-                        } else if y < size * 2
-                            && let Some(bottom) =
-                                board.get_tile_id(if y < size { x - 1 } else { x + 1 }, y + 1)
+                        } else if y < y_size
+                            && let Some(bottom) = board.get_tile_id(x - 1, y + 1)
                         {
                             edges[current].push(bottom);
                         }
@@ -251,17 +250,22 @@ impl Edges {
         Self { edges }
     }
 
-    pub fn reachable_from(&self, own_id: usize, foe_id: usize) -> Vec<usize> {
+    pub fn reachable_from(&self, own_id: usize, foe_ids: &[usize]) -> Vec<usize> {
         let mut reachable = self.edges[own_id].clone();
 
-        if reachable.contains(&foe_id) {
-            reachable.retain(|&x| x != foe_id);
-            for &location in &self.edges[foe_id] {
-                if location != own_id {
-                    reachable.push(location);
-                }
+        for _ in 0..foe_ids.len() {
+            let reacahble_foes: Vec<usize> = reachable
+                .iter()
+                .copied()
+                .filter(|x| foe_ids.contains(x))
+                .collect();
+            reachable.retain(|x| !foe_ids.contains(x));
+            for foe in reacahble_foes {
+                reachable.append(&mut self.edges[foe].clone());
             }
         }
+
+        reachable.retain(|x| !foe_ids.contains(x) && *x != own_id);
 
         reachable
     }
@@ -279,17 +283,34 @@ fn back_skip(x: usize, y: usize, size: usize) -> bool {
     y >= size && x > 6 * size - 2 * y - 2
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(EnumIter, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SquareWall {
     Right,
     Down,
 }
+impl From<SquareWall> for Quat {
+    fn from(value: SquareWall) -> Self {
+        Quat::from_rotation_z(match value {
+            SquareWall::Right => std::f32::consts::FRAC_PI_2,
+            SquareWall::Down => 0.,
+        })
+    }
+}
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(EnumIter, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TriangleWall {
     Down,
     UpRight,
     DownRight,
+}
+impl From<TriangleWall> for Quat {
+    fn from(value: TriangleWall) -> Quat {
+        Quat::from_rotation_z(match value {
+            TriangleWall::Down => 0.,
+            TriangleWall::UpRight => -std::f32::consts::FRAC_PI_3,
+            TriangleWall::DownRight => std::f32::consts::FRAC_PI_3,
+        })
+    }
 }
 
 #[derive(Resource)]

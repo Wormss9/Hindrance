@@ -4,9 +4,9 @@ use crate::{
     colors::{PointerColorInteraction, Theme},
     exit_menu::ExitMenuState,
     game_logic::{
-        Board, Edges, SquareWall, WallCount,
-        bundles::{SquareGapBundle, TileBundle, WallBundle},
-        components::{CounterText, Foe, GridLocation, Id, Own, SquareGapPosition, Wall},
+        Board, Edges, WallCount,
+        bundles::{GapBundle, TileBundle, WallBundle},
+        components::{CounterText, Foe, GridLocation, Id, Own, Wall},
         observers::{PointerInteraction, hide_wall, move_own, place_wall, show_wall},
         systems::{update_counter_text, update_reachable_tiles},
     },
@@ -19,17 +19,17 @@ pub struct GamePlugin;
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(OnEnter(GameState::InGame), setup_game)
-            .add_systems(OnExit(GameState::InGame), cleanup_square);
-        // .add_systems(
-        //     Update,
-        //     update_reachable_tiles.run_if(in_state(GameState::InGame)),
-        // )
-        // .add_systems(
-        //     Update,
-        //     update_counter_text
-        //         .after(setup_square)
-        //         .run_if(in_state(GameState::InGame)),
-        // );
+            .add_systems(OnExit(GameState::InGame), cleanup_square)
+            .add_systems(
+                Update,
+                update_reachable_tiles.run_if(in_state(GameState::InGame)),
+            )
+            .add_systems(
+                Update,
+                update_counter_text
+                    .after(setup_game)
+                    .run_if(in_state(GameState::InGame)),
+            );
     }
 }
 
@@ -51,60 +51,80 @@ pub fn setup_game(
     let square_entity = commands
         .spawn((Transform::default(), Visibility::Visible))
         .with_children(|parent| {
-            //Exit arrow
-            // parent
-            //     .spawn((
-            //         Mesh2d(meshes.add(arrow_mesh(board.tile_size))),
-            //         Transform {
-            //             translation: Vec3::new(
-            //                 -shape.get_x_offset() * (board.mid + 2) as f32,
-            //                 shape.get_y_offset() * (board.size - board.mid - 1) as f32,
-            //                 0.,
-            //             ),
-            //             rotation: Quat::from_rotation_z(std::f32::consts::PI),
-            //             ..default()
-            //         },
-            //         Pickable::default(),
-            //     ))
-            //     .with_color_set(&theme.exit)
-            //     .observe(
-            //         |_: On<Pointer<Release>>, mut exit_state: ResMut<NextState<ExitMenuState>>| {
-            //             exit_state.set(ExitMenuState::Exiting);
-            //         },
-            //     );
+            // Exit arrow
+            let (x_mid, y_mid) = board.get_mids();
+            parent
+                .spawn((
+                    Mesh2d(meshes.add(arrow_mesh(board.tile_size))),
+                    Transform {
+                        translation: Vec3::new(
+                            -board.get_x_offset() * (x_mid + 2) as f32,
+                            board.get_y_offset() * y_mid as f32,
+                            0.,
+                        ),
+                        rotation: Quat::from_rotation_z(std::f32::consts::PI),
+                        ..default()
+                    },
+                    Pickable::default(),
+                ))
+                .with_color_set(&theme.exit)
+                .observe(
+                    |_: On<Pointer<Release>>, mut exit_state: ResMut<NextState<ExitMenuState>>| {
+                        exit_state.set(ExitMenuState::Exiting);
+                    },
+                );
 
-            //Counters
-            // let own_color = materials.get(&theme.own.normal).unwrap().color;
-            // let foe1_color = materials.get(&theme.foe1.normal).unwrap().color;
-            // parent.spawn((
-            //     Text2d::new("10"),
-            //     TextColor(own_color),
-            //     TextFont {
-            //         font_size: board.tile_size,
-            //         ..default()
-            //     },
-            //     Transform {
-            //         translation: Vec3::new(-shape.get_x_offset() * (board.mid + 2) as f32, 0., 0.),
-            //         ..default()
-            //     },
-            //     CounterText::OWN,
-            // ));
-            // parent.spawn((
-            //     Text2d::new("10"),
-            //     TextColor(foe1_color),
-            //     TextFont {
-            //         font_size: board.tile_size,
-            //         ..default()
-            //     },
-            //     Transform {
-            //         translation: Vec3::new(shape.get_x_offset() * (board.mid + 2) as f32, 0., 0.),
-            //         ..default()
-            //     },
-            //     CounterText::FOE,
-            // ));
+            // Counters
+            let own_color = materials.get(&theme.own.normal).unwrap().color;
+            let foe_colors = match board.shape {
+                crate::game_logic::Shape::Square => {
+                    vec![materials.get(&theme.foe1.normal).unwrap().color]
+                }
+                crate::game_logic::Shape::Triangle => vec![
+                    materials.get(&theme.foe1.normal).unwrap().color,
+                    materials.get(&theme.foe2.normal).unwrap().color,
+                ],
+            };
+            parent.spawn((
+                Text2d::new(board.max_walls.to_string()),
+                TextColor(own_color),
+                TextFont {
+                    font_size: board.tile_size,
+                    ..default()
+                },
+                Transform {
+                    translation: Vec3::new(
+                        -board.get_x_offset() * (board.get_mids().0 + 2) as f32,
+                        0.,
+                        0.,
+                    ),
+                    ..default()
+                },
+                CounterText::OWN,
+            ));
+            let foe_ammount = foe_colors.len() as f32;
+            for (foe_number, foe_color) in foe_colors.into_iter().enumerate() {
+                parent.spawn((
+                    Text2d::new(board.max_walls.to_string()),
+                    TextColor(foe_color),
+                    TextFont {
+                        font_size: board.tile_size,
+                        ..default()
+                    },
+                    Transform {
+                        translation: Vec3::new(
+                            board.get_x_offset() * (board.get_mids().0 + 2) as f32,
+                            -board.get_y_offset() * ((foe_ammount - 1.) / 2. - foe_number as f32),
+                            0.,
+                        ),
+                        ..default()
+                    },
+                    CounterText::FOE,
+                    Id(foe_number),
+                ));
+            }
 
-            // let mut wall_entities = Vec::with_capacity((board.size - 1) * (board.size - 1) * 2);
-
+            // Tiles Walls Gaps
             let (x_size, y_size) = board.grid_dimentions();
 
             for y in 0..y_size {
@@ -112,11 +132,13 @@ pub fn setup_game(
                     if board.get_tile_id(x, y).is_none() {
                         continue;
                     }
+                    // Tiles
                     parent
                         .spawn(TileBundle::new(&mut meshes, &theme, x, y, board))
                         .with_pointer_interaction()
                         .observe(move_own);
 
+                    // Walls
                     let mut wall_entities: Vec<(Entity, Wall)> =
                         Vec::with_capacity(match board.shape {
                             crate::game_logic::Shape::Square => 2,
@@ -125,88 +147,49 @@ pub fn setup_game(
 
                     for wall_position in board.get_walls(x, y) {
                         let wall_entity = parent
-                            .spawn((WallBundle::new(
+                            .spawn(WallBundle::new(
                                 &mut meshes,
                                 &theme,
                                 x,
                                 y,
                                 board,
                                 wall_position,
-                            ),))
+                            ))
                             .id();
                         wall_entities.push((wall_entity, wall_position));
                     }
+
+                    // Gaps
+                    for (wall_entity, wall) in wall_entities {
+                        parent
+                            .spawn(GapBundle::new(
+                                &mut meshes,
+                                board,
+                                x,
+                                y,
+                                wall_entity,
+                                wall,
+                                true,
+                            ))
+                            .observe(show_wall)
+                            .observe(hide_wall)
+                            .observe(place_wall);
+                        parent
+                            .spawn(GapBundle::new(
+                                &mut meshes,
+                                board,
+                                x,
+                                y,
+                                wall_entity,
+                                wall,
+                                false,
+                            ))
+                            .observe(show_wall)
+                            .observe(hide_wall)
+                            .observe(place_wall);
+                    }
                 }
             }
-            //             parent
-            //                 .spawn(SquareGapBundle::new(
-            //                     &mut meshes,
-            //                     shape,
-            //                     x,
-            //                     y,
-            //                     SquareGapPosition::RD,
-            //                     &wall_entities,
-            //                 ))
-            //                 .observe(show_wall)
-            //                 .observe(hide_wall)
-            //                 .observe(place_wall(shape));
-            //         };
-            //         if y < board.size - 1 && x < board.size - 1 {
-            //             wall_entities.push(
-            //                 parent
-            //                     .spawn(WallBundle::new(
-            //                         &mut meshes,
-            //                         &theme,
-            //                         x,
-            //                         y,
-            //                         shape,
-            //                         Wall::Square(SquareWall::Down),
-            //                     ))
-            //                     .id(),
-            //             );
-            //             parent
-            //                 .spawn(SquareGapBundle::new(
-            //                     &mut meshes,
-            //                     shape,
-            //                     x,
-            //                     y,
-            //                     SquareGapPosition::DR,
-            //                     &wall_entities,
-            //                 ))
-            //                 .observe(show_wall)
-            //                 .observe(hide_wall)
-            //                 .observe(place_wall(shape));
-            //         };
-            //         if y > 0 && x < board.size - 1 {
-            //             parent
-            //                 .spawn(SquareGapBundle::new(
-            //                     &mut meshes,
-            //                     shape,
-            //                     x,
-            //                     y,
-            //                     SquareGapPosition::RU,
-            //                     &wall_entities,
-            //                 ))
-            //                 .observe(show_wall)
-            //                 .observe(hide_wall)
-            //                 .observe(place_wall(shape));
-            //         };
-            //         if y < board.size - 1 && x > 0 {
-            //             parent
-            //                 .spawn(SquareGapBundle::new(
-            //                     &mut meshes,
-            //                     shape,
-            //                     x,
-            //                     y,
-            //                     SquareGapPosition::DL,
-            //                     &wall_entities,
-            //                 ))
-            //                 .observe(show_wall)
-            //                 .observe(hide_wall)
-            //                 .observe(place_wall(shape));
-            //         };
-            //     }
-            // }
             match board.shape {
                 crate::game_logic::Shape::Square => {
                     let (x, y) = (board.size / 2, 0);
@@ -220,18 +203,15 @@ pub fn setup_game(
                         Foe,
                     ));
                     let (x, y) = (board.size / 2, board.size - 1);
-                    parent
-                        .spawn((
-                            Mesh2d(meshes.add(Circle::new(board.tile_size / 2.))),
-                            board.into_tile_transform(x, y),
-                            Pickable::default(),
-                            MeshMaterial2d(theme.own.normal.clone()),
-                            GridLocation::new(x, y),
-                            Id(board.get_tile_id(x, y).expect("Failed to spawn own")),
-                            Own,
-                        ))
-                        .observe(show_wall)
-                        .observe(hide_wall);
+                    parent.spawn((
+                        Mesh2d(meshes.add(Circle::new(board.tile_size / 2.))),
+                        board.into_tile_transform(x, y),
+                        Pickable::default(),
+                        MeshMaterial2d(theme.own.normal.clone()),
+                        GridLocation::new(x, y),
+                        Id(board.get_tile_id(x, y).expect("Failed to spawn own")),
+                        Own,
+                    ));
                 }
                 crate::game_logic::Shape::Triangle => {
                     let (x, y) = (board.size, board.size / 2);
@@ -244,9 +224,9 @@ pub fn setup_game(
                         Id(board.get_tile_id(x, y).expect("Failed to spawn foe1")),
                         Foe,
                     ));
-                    let gap= match board.size.is_multiple_of(2){
-                        true => {2},
-                        false => {1},
+                    let gap = match board.size.is_multiple_of(2) {
+                        true => 2,
+                        false => 1,
                     };
                     let (x, y) = (4 * board.size - gap, board.size / 2);
                     parent.spawn((
@@ -259,23 +239,19 @@ pub fn setup_game(
                         Foe,
                     ));
                     let (x, y) = (board.size, 2 * board.size - 1);
-                    parent
-                        .spawn((
-                            Mesh2d(meshes.add(Circle::new(board.tile_size / 3.))),
-                            board.into_tile_transform(x, y),
-                            Pickable::default(),
-                            MeshMaterial2d(theme.own.normal.clone()),
-                            GridLocation::new(x, y),
-                            Id(board.get_tile_id(x, y).expect("Failed to spawn own")),
-                            Own,
-                        ))
-                        .observe(show_wall)
-                        .observe(hide_wall);
+                    parent.spawn((
+                        Mesh2d(meshes.add(Circle::new(board.tile_size / 3.))),
+                        board.into_tile_transform(x, y),
+                        Pickable::default(),
+                        MeshMaterial2d(theme.own.normal.clone()),
+                        GridLocation::new(x, y),
+                        Id(board.get_tile_id(x, y).expect("Failed to spawn own")),
+                        Own,
+                    ));
                 }
             }
         })
         .id();
-
     commands.insert_resource(GameData { square_entity });
 }
 

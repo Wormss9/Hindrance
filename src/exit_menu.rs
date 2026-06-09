@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     colors::{PointerColorInteraction, Theme},
+    game_logic::Board,
     main_menu::GameState,
     shapes::{arrow_mesh, cross_mesh},
 };
@@ -32,6 +33,7 @@ pub fn setup_exit_menu(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     theme: Res<Theme>,
+    board: Res<Board>,
 ) {
     let exit_menu_entity = commands
         .spawn((Transform::default(), Visibility::Visible))
@@ -44,8 +46,8 @@ pub fn setup_exit_menu(
             ));
             parent
                 .spawn((
-                    Mesh2d(meshes.add(arrow_mesh(32.0))),
-                    Transform::from_translation(Vec3::new(50., 0., 2.)),
+                    Mesh2d(meshes.add(arrow_mesh(board.tile_size))),
+                    Transform::from_translation(Vec3::new(board.tile_size * 2., 0., 2.)),
                     Pickable::default(),
                 ))
                 .with_color_set(&theme.own)
@@ -56,9 +58,9 @@ pub fn setup_exit_menu(
                 );
             parent
                 .spawn((
-                    Mesh2d(meshes.add(cross_mesh(32.0))),
+                    Mesh2d(meshes.add(cross_mesh(board.tile_size))),
                     Transform {
-                        translation: Vec3::new(-50., -0., 2.),
+                        translation: Vec3::new(-board.tile_size * 2., 0., 2.),
                         rotation: Quat::from_rotation_z(std::f32::consts::FRAC_PI_4),
                         ..default()
                     },

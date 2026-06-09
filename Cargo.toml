@@ -8,7 +8,8 @@ bevy = { version = "0.18.x", default-features = false, features = [
     "2d",
     "debug",
 ] }
-bevy-steamworks = "0.16.0"
+bevy-steamworks = "0.16.x"
+strum = { version = "0.28.x", features = ["derive"] }
 
 [profile.release]
 opt-level = "z"
