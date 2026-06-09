@@ -2,7 +2,7 @@ use crate::{
     colors::Theme,
     game_logic::{
         Edges, WallCount,
-        components::{CounterText, Foe, Id, Interactable, Own, Pointable, Tile},
+        components::{CounterText, Foe, Goal, Id, Interactable, Own, Pointable, Tile},
     },
 };
 use bevy::prelude::*;
@@ -10,6 +10,7 @@ use bevy::prelude::*;
 pub fn update_reachable_tiles(
     mut query: Query<
         (
+            &Goal,
             &mut MeshMaterial2d<ColorMaterial>,
             &Pointable,
             &Id,
@@ -30,7 +31,7 @@ pub fn update_reachable_tiles(
 
     let reachable_ids = edges.reachable_from(own_location.0, &foe_locations);
 
-    for (mut material, pointable, id, mut interactable) in &mut query {
+    for (goal, mut material, pointable, id, mut interactable) in &mut query {
         let reachable = reachable_ids.contains(&id.0);
 
         material.0 = if reachable {
@@ -44,7 +45,7 @@ pub fn update_reachable_tiles(
             }
         } else {
             interactable.0 = false;
-            theme.tile.normal.clone()
+            goal.to_color(&theme)
         }
     }
 }

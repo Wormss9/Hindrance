@@ -8,6 +8,7 @@ use bevy::prelude::*;
 
 #[derive(Bundle)]
 pub struct TileBundle {
+    goal:Goal,
     id: Id,
     interactable: Interactable,
     mesh: Mesh2d,
@@ -25,6 +26,7 @@ impl TileBundle {
         x: usize,
         y: usize,
         board: Board,
+        goal:Goal,
     ) -> Self {
         let mesh = match board.shape {
             Shape::Square => Mesh2d(meshes.add(Rectangle::new(board.tile_size, board.tile_size))),
@@ -33,11 +35,13 @@ impl TileBundle {
             }
         };
         let transform = board.into_tile_transform(x, y);
+        let color = goal.to_color(theme);
         Self {
+            goal,
             id: Id(board.get_tile_id(x, y).expect("Board spawning failed!")),
             interactable: Interactable(false),
             mesh,
-            mesh_material: MeshMaterial2d(theme.tile.normal.clone()),
+            mesh_material: MeshMaterial2d(color),
             pickable: Pickable::default(),
             pointable: Pointable::default(),
             tile: Tile,

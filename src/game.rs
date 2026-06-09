@@ -127,8 +127,9 @@ pub fn setup_game(
                         continue;
                     }
                     // Tiles
+                    let goal = board.goal(x, y);
                     parent
-                        .spawn(TileBundle::new(&mut meshes, &theme, x, y, board))
+                        .spawn(TileBundle::new(&mut meshes, &theme, x, y, board, goal))
                         .with_pointer_interaction()
                         .observe(move_own);
 

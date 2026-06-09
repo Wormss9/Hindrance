@@ -7,7 +7,7 @@ use bevy::ecs::resource::Resource;
 use bevy::prelude::*;
 use strum::EnumIter;
 
-use crate::game_logic::components::Wall;
+use crate::game_logic::components::{Goal, Wall};
 
 const SQUARE_SIZE: usize = 9;
 const TRIANGLE_SIZE: usize = 4;
@@ -155,6 +155,33 @@ impl Board {
             }
         }
         walls
+    }
+    pub fn goal(&self, x: usize, y: usize) -> Goal {
+        let y_size = self.grid_dimentions().1;
+        match self.shape {
+            Shape::Square => match y {
+                0 => Goal::Own,
+                val if val == y_size - 1 => Goal::Foe1,
+                _ => Goal::None,
+            },
+            Shape::Triangle => {
+                if y == 0 {
+                    Goal::Own
+                } else if y > y_size / 2 - 2 {
+                    if x == 0 || x == 1 {
+                        Goal::Foe2
+                    } else if x == self.size * 2 + (y_size - y) * 2 - 3
+                        || x == self.size * 2 + (y_size - y) * 2 - 2
+                    {
+                        Goal::Foe1
+                    } else {
+                        Goal::None
+                    }
+                } else {
+                    Goal::None
+                }
+            }
+        }
     }
 }
 

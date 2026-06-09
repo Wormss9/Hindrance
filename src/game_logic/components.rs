@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::game_logic::{SquareWall, TriangleWall};
+use crate::{colors::Theme, game_logic::{SquareWall, TriangleWall}};
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Interactable(pub bool);
@@ -57,4 +57,23 @@ impl From<Wall> for Quat {
 pub enum CounterText {
     OWN,
     FOE,
+}
+
+#[derive(Component)]
+pub enum Goal {
+    None,
+    Own,
+    Foe1,
+    Foe2,
+}
+
+impl Goal {
+    pub fn to_color(&self, theme: &Theme) -> Handle<ColorMaterial> {
+        match self {
+            Goal::None => theme.tile.normal.clone(),
+            Goal::Own => theme.own_tile.normal.clone(),
+            Goal::Foe1 => theme.foe1_tile.normal.clone(),
+            Goal::Foe2 => theme.foe2_tile.normal.clone(),
+        }
+    }
 }
