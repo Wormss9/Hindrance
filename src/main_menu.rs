@@ -42,7 +42,9 @@ pub fn add_camera(mut commands: Commands) {
             ..default()
         },
         Projection::Orthographic(OrthographicProjection {
-            scaling_mode: ScalingMode::FixedVertical { viewport_height: 720. },
+            scaling_mode: ScalingMode::FixedVertical {
+                viewport_height: 720.,
+            },
             ..OrthographicProjection::default_2d()
         }),
         Tonemapping::None,
