@@ -59,6 +59,7 @@ pub fn move_own(
     let Ok((mut own_transform, mut own_id)) = own.single_mut() else {
         return;
     };
+    println!("{}", tile_id.0);
     if interactable.0 {
         *own_transform = *target_transform;
         own_id.0 = tile_id.0;
@@ -215,19 +216,62 @@ fn add_wall(
         commands.entity(entity).despawn();
     }
 
-    // let tile_base = wall / 2;
-    // let y = tile_base / (size - 1);
-    // let x = tile_base % (size - 1);
-
-    // let tile_id = x + y * size;
-    // let tile_bellow_id = tile_id + size;
-
-    // if wall.is_multiple_of(2) {
-    //     edges.remove_edge(tile_id, tile_id + 1);
-    //     edges.remove_edge(tile_bellow_id, tile_bellow_id + 1);
-    // } else {
-    //     edges.remove_edge(tile_id, tile_bellow_id);
-    //     edges.remove_edge(tile_id + 1, tile_bellow_id + 1);
-    // };
+    let id = id.0;
+    match rotation {
+        Wall::Square(square_wall) => match square_wall {
+            SquareWall::Right => {
+                edges.remove_edge(
+                    board.get_tile_id(x, y).unwrap(),
+                    board.get_tile_id(x + 1, y).unwrap(),
+                );
+                edges.remove_edge(
+                    board.get_tile_id(x, y + 1).unwrap(),
+                    board.get_tile_id(x + 1, y + 1).unwrap(),
+                );
+            }
+            SquareWall::Down => {
+                edges.remove_edge(
+                    board.get_tile_id(x, y).unwrap(),
+                    board.get_tile_id(x, y + 1).unwrap(),
+                );
+                edges.remove_edge(
+                    board.get_tile_id(x + 1, y).unwrap(),
+                    board.get_tile_id(x + 1, y + 1).unwrap(),
+                );
+            }
+        },
+        Wall::Triangle(triangle_wall) => match triangle_wall {
+            TriangleWall::Down => {
+                edges.remove_edge(
+                    board.get_tile_id(x - 1, y).unwrap(),
+                    board.get_tile_id(x - 2, y + 1).unwrap(),
+                );
+                edges.remove_edge(
+                    board.get_tile_id(x + 1, y).unwrap(),
+                    board.get_tile_id(x, y + 1).unwrap(),
+                );
+            }
+            TriangleWall::UpRight => {
+                edges.remove_edge(
+                    board.get_tile_id(x, y).unwrap(),
+                    board.get_tile_id(x - 1, y).unwrap(),
+                );
+                edges.remove_edge(
+                    board.get_tile_id(x, y + 1).unwrap(),
+                    board.get_tile_id(x - 1, y + 1).unwrap(),
+                );
+            }
+            TriangleWall::DownRight => {
+                edges.remove_edge(
+                    board.get_tile_id(x, y).unwrap(),
+                    board.get_tile_id(x + 1, y).unwrap(),
+                );
+                edges.remove_edge(
+                    board.get_tile_id(x - 1, y + 1).unwrap(),
+                    board.get_tile_id(x - 2, y + 1).unwrap(),
+                );
+            }
+        },
+    }
     wall_count.own -= 1;
 }
