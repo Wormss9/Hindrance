@@ -3,13 +3,7 @@ use bevy::prelude::*;
 use crate::{
     colors::{PointerColorInteraction, Theme},
     exit_menu::ExitMenuState,
-    game_logic::{
-        Board, Edges, WallCount,
-        bundles::{GapBundle, TileBundle, WallBundle},
-        components::{CounterText, Foe, GridLocation, Id, Own, Wall},
-        observers::{PointerInteraction, hide_wall, move_own, place_wall, show_wall},
-        systems::{update_counter_text, update_reachable_tiles},
-    },
+    game_logic::{bundles::*, components::*, observers::*, systems::*, *},
     main_menu::GameState,
     shapes::arrow_mesh,
 };
@@ -252,6 +246,11 @@ pub fn setup_game(
             }
         })
         .id();
+    commands.spawn((
+        Mesh2d(meshes.add(Circle::new(board.tile_size / 8.))),
+        Transform::default(),
+        MeshMaterial2d(theme.exit.normal.clone()),
+    ));
     commands.insert_resource(GameData { square_entity });
 }
 

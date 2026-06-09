@@ -59,7 +59,6 @@ pub fn move_own(
     let Ok((mut own_transform, mut own_id)) = own.single_mut() else {
         return;
     };
-    println!("{}", tile_id.0);
     if interactable.0 {
         *own_transform = *target_transform;
         own_id.0 = tile_id.0;
@@ -215,8 +214,6 @@ fn add_wall(
     for entity in gaps_to_despawn {
         commands.entity(entity).despawn();
     }
-
-    let id = id.0;
     match rotation {
         Wall::Square(square_wall) => match square_wall {
             SquareWall::Right => {

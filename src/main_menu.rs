@@ -1,4 +1,5 @@
 use bevy::{
+    camera::ScalingMode,
     core_pipeline::tonemapping::{DebandDither, Tonemapping},
     post_process::bloom::Bloom,
     prelude::*,
@@ -40,6 +41,10 @@ pub fn add_camera(mut commands: Commands) {
             clear_color: ClearColorConfig::Custom(Color::BLACK),
             ..default()
         },
+        Projection::Orthographic(OrthographicProjection {
+            scaling_mode: ScalingMode::FixedVertical { viewport_height: 720. },
+            ..OrthographicProjection::default_2d()
+        }),
         Tonemapping::None,
         Bloom {
             intensity: 0.25,

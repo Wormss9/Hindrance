@@ -88,13 +88,13 @@ impl Board {
                     false => self.get_triangle_rotation_offset() / 2.,
                 };
                 let y_shift = match points_downwards {
-                    true => -self.gap_size / 2.,
-                    false => 0.,
+                    true => 0.,
+                    false => self.gap_size / 2.,
                 };
                 Transform {
                     translation: Vec3 {
-                        x: self.get_x_offset() * (x as f32 - mid_x as f32) + row_offset,
-                        y: self.get_y_offset() * (mid_y as f32 - y as f32)
+                        x: self.get_x_offset() * (x as f32 - mid_x as f32 + 1.) + row_offset,
+                        y: self.get_y_offset() * (mid_y as f32 - y as f32 - 0.5)
                             + y_shift
                             + rotation_offset,
                         z: 0.,
