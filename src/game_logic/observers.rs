@@ -1,6 +1,6 @@
 use crate::game_logic::{
     Board, Edges, SquareWall, TriangleWall, WallCount,
-    components::{Gap, GridLocation, Id, Interactable, Own, Pointable, Tile, Wall},
+    components::{Character, Gap, GridLocation, Id, Interactable, Owner, Pointable, Tile, Wall},
 };
 use bevy::prelude::*;
 use strum::IntoEnumIterator;
@@ -50,15 +50,20 @@ impl<'w> PointerInteraction for EntityCommands<'w> {
 #[allow(clippy::type_complexity)]
 pub fn move_own(
     event: On<Pointer<Release>>,
-    mut own: Query<(&mut Transform, &mut Id), With<Own>>,
-    tile: Query<(&Interactable, &Transform, &Id), (With<Tile>, Without<Own>)>,
+    own_querry: Query<((&mut Transform, &mut Id), &Owner), With<Character>>,
+    tile: Query<(&Interactable, &Transform, &Id), (With<Tile>, Without<Character>)>,
 ) {
-    let Ok((interactable, target_transform, tile_id)) = tile.get(event.event_target()) else {
-        return;
-    };
-    let Ok((mut own_transform, mut own_id)) = own.single_mut() else {
-        return;
-    };
+    let mut own = None;
+
+    let (interactable, target_transform, tile_id) = tile
+        .get(event.event_target())
+        .expect("Target tile not found");
+    for (own_p, owner) in own_querry {
+        if owner == &Owner::Own {
+            own = Some(own_p)
+        }
+    }
+    let (mut own_transform, mut own_id) = own.expect("Failed to find own character");
     if interactable.0 {
         *own_transform = *target_transform;
         own_id.0 = tile_id.0;
@@ -98,6 +103,7 @@ pub fn hide_wall(
 pub fn place_wall(
     event: On<Pointer<Release>>,
     commands: Commands,
+    players: Query<(&Owner, &Id), With<Character>>,
     target_query: Query<(&Id, &GridLocation, &Wall), With<Gap>>,
     wall_query: Query<(Entity, &Id, &Wall), With<Wall>>,
     gap_query: Query<(Entity, &Gap)>,
@@ -109,9 +115,12 @@ pub fn place_wall(
     let (id, location, rotation) = target_query
         .get(target)
         .expect("Failed to get clicked gap!");
-    add_wall(
-        commands, *id, *location, *rotation, wall_query, gap_query, wall_count, edges, board,
-    );
+    if add_wall(
+        commands, *id, *location, *rotation, wall_query, gap_query, players, wall_count, edges,
+        board,
+    ) {
+        // Next turn
+    };
 }
 #[allow(clippy::too_many_arguments)]
 fn add_wall(
@@ -121,14 +130,79 @@ fn add_wall(
     rotation: Wall,
     wall_query: Query<(Entity, &Id, &Wall), With<Wall>>,
     gap_query: Query<(Entity, &Gap)>,
+    players: Query<(&Owner, &Id), With<Character>>,
     mut wall_count: ResMut<WallCount>,
     mut edges: ResMut<Edges>,
     board: Res<Board>,
-) {
+) -> bool {
     if wall_count.own == 0 {
-        return;
+        return false;
     }
     let mut walls = Vec::new();
+    let GridLocation { x, y } = location;
+    let mut new_edges = edges.clone();
+
+    match rotation {
+        Wall::Square(square_wall) => match square_wall {
+            SquareWall::Right => {
+                new_edges.remove_edge(
+                    board.get_tile_id(x, y).unwrap(),
+                    board.get_tile_id(x + 1, y).unwrap(),
+                );
+                new_edges.remove_edge(
+                    board.get_tile_id(x, y + 1).unwrap(),
+                    board.get_tile_id(x + 1, y + 1).unwrap(),
+                );
+            }
+            SquareWall::Down => {
+                new_edges.remove_edge(
+                    board.get_tile_id(x, y).unwrap(),
+                    board.get_tile_id(x, y + 1).unwrap(),
+                );
+                new_edges.remove_edge(
+                    board.get_tile_id(x + 1, y).unwrap(),
+                    board.get_tile_id(x + 1, y + 1).unwrap(),
+                );
+            }
+        },
+        Wall::Triangle(triangle_wall) => match triangle_wall {
+            TriangleWall::Down => {
+                new_edges.remove_edge(
+                    board.get_tile_id(x - 1, y).unwrap(),
+                    board.get_tile_id(x - 2, y + 1).unwrap(),
+                );
+                new_edges.remove_edge(
+                    board.get_tile_id(x + 1, y).unwrap(),
+                    board.get_tile_id(x, y + 1).unwrap(),
+                );
+            }
+            TriangleWall::UpRight => {
+                new_edges.remove_edge(
+                    board.get_tile_id(x, y).unwrap(),
+                    board.get_tile_id(x - 1, y).unwrap(),
+                );
+                new_edges.remove_edge(
+                    board.get_tile_id(x, y + 1).unwrap(),
+                    board.get_tile_id(x - 1, y + 1).unwrap(),
+                );
+            }
+            TriangleWall::DownRight => {
+                new_edges.remove_edge(
+                    board.get_tile_id(x, y).unwrap(),
+                    board.get_tile_id(x + 1, y).unwrap(),
+                );
+                new_edges.remove_edge(
+                    board.get_tile_id(x - 1, y + 1).unwrap(),
+                    board.get_tile_id(x - 2, y + 1).unwrap(),
+                );
+            }
+        },
+    }
+
+    if !new_edges.are_goals_reachable(players) {
+        return false;
+    }
+    *edges = new_edges;
 
     match board.shape {
         super::Shape::Square => {
@@ -142,7 +216,6 @@ fn add_wall(
             }
         }
     }
-    let GridLocation { x, y } = location;
     match rotation {
         Wall::Square(square_wall) => match square_wall {
             SquareWall::Right => {
@@ -214,61 +287,6 @@ fn add_wall(
     for entity in gaps_to_despawn {
         commands.entity(entity).despawn();
     }
-    match rotation {
-        Wall::Square(square_wall) => match square_wall {
-            SquareWall::Right => {
-                edges.remove_edge(
-                    board.get_tile_id(x, y).unwrap(),
-                    board.get_tile_id(x + 1, y).unwrap(),
-                );
-                edges.remove_edge(
-                    board.get_tile_id(x, y + 1).unwrap(),
-                    board.get_tile_id(x + 1, y + 1).unwrap(),
-                );
-            }
-            SquareWall::Down => {
-                edges.remove_edge(
-                    board.get_tile_id(x, y).unwrap(),
-                    board.get_tile_id(x, y + 1).unwrap(),
-                );
-                edges.remove_edge(
-                    board.get_tile_id(x + 1, y).unwrap(),
-                    board.get_tile_id(x + 1, y + 1).unwrap(),
-                );
-            }
-        },
-        Wall::Triangle(triangle_wall) => match triangle_wall {
-            TriangleWall::Down => {
-                edges.remove_edge(
-                    board.get_tile_id(x - 1, y).unwrap(),
-                    board.get_tile_id(x - 2, y + 1).unwrap(),
-                );
-                edges.remove_edge(
-                    board.get_tile_id(x + 1, y).unwrap(),
-                    board.get_tile_id(x, y + 1).unwrap(),
-                );
-            }
-            TriangleWall::UpRight => {
-                edges.remove_edge(
-                    board.get_tile_id(x, y).unwrap(),
-                    board.get_tile_id(x - 1, y).unwrap(),
-                );
-                edges.remove_edge(
-                    board.get_tile_id(x, y + 1).unwrap(),
-                    board.get_tile_id(x - 1, y + 1).unwrap(),
-                );
-            }
-            TriangleWall::DownRight => {
-                edges.remove_edge(
-                    board.get_tile_id(x, y).unwrap(),
-                    board.get_tile_id(x + 1, y).unwrap(),
-                );
-                edges.remove_edge(
-                    board.get_tile_id(x - 1, y + 1).unwrap(),
-                    board.get_tile_id(x - 2, y + 1).unwrap(),
-                );
-            }
-        },
-    }
     wall_count.own -= 1;
+    true
 }

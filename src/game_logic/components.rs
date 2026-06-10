@@ -15,6 +15,9 @@ pub struct Pointable {
 pub struct Tile;
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Character;
+
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Id(pub usize);
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -32,11 +35,6 @@ impl GridLocation {
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Gap(pub Entity);
 
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Own;
-
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Foe;
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Wall {
@@ -59,21 +57,21 @@ pub enum CounterText {
     FOE,
 }
 
-#[derive(Component)]
-pub enum Goal {
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Owner {
     None,
     Own,
     Foe1,
     Foe2,
 }
 
-impl Goal {
+impl Owner {
     pub fn to_color(&self, theme: &Theme) -> Handle<ColorMaterial> {
         match self {
-            Goal::None => theme.tile.normal.clone(),
-            Goal::Own => theme.own_tile.normal.clone(),
-            Goal::Foe1 => theme.foe1_tile.normal.clone(),
-            Goal::Foe2 => theme.foe2_tile.normal.clone(),
+            Owner::None => theme.tile.normal.clone(),
+            Owner::Own => theme.own_tile.normal.clone(),
+            Owner::Foe1 => theme.foe1_tile.normal.clone(),
+            Owner::Foe2 => theme.foe2_tile.normal.clone(),
         }
     }
 }

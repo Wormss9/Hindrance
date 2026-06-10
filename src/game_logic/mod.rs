@@ -3,11 +3,12 @@ pub mod components;
 pub mod observers;
 pub mod systems;
 
-use bevy::ecs::resource::Resource;
 use bevy::prelude::*;
+use bevy::{ecs::resource::Resource, platform::collections::HashMap};
+use std::collections::VecDeque;
 use strum::EnumIter;
 
-use crate::game_logic::components::{Goal, Wall};
+use crate::game_logic::components::{Character, Id, Owner, Wall};
 
 const SQUARE_SIZE: usize = 9;
 const TRIANGLE_SIZE: usize = 4;
@@ -156,29 +157,29 @@ impl Board {
         }
         walls
     }
-    pub fn goal(&self, x: usize, y: usize) -> Goal {
+    pub fn goal(&self, x: usize, y: usize) -> Owner {
         let y_size = self.grid_dimentions().1;
         match self.shape {
             Shape::Square => match y {
-                0 => Goal::Own,
-                val if val == y_size - 1 => Goal::Foe1,
-                _ => Goal::None,
+                0 => Owner::Own,
+                val if val == y_size - 1 => Owner::Foe1,
+                _ => Owner::None,
             },
             Shape::Triangle => {
                 if y == 0 {
-                    Goal::Own
+                    Owner::Own
                 } else if y > y_size / 2 - 2 {
                     if x == 0 || x == 1 {
-                        Goal::Foe2
+                        Owner::Foe2
                     } else if x == self.size * 2 + (y_size - y) * 2 - 3
                         || x == self.size * 2 + (y_size - y) * 2 - 2
                     {
-                        Goal::Foe1
+                        Owner::Foe1
                     } else {
-                        Goal::None
+                        Owner::None
                     }
                 } else {
-                    Goal::None
+                    Owner::None
                 }
             }
         }
@@ -200,9 +201,10 @@ pub struct Board {
     pub max_walls: usize,
 }
 
-#[derive(Resource)]
+#[derive(Resource, Clone)]
 pub struct Edges {
     pub edges: Vec<Vec<usize>>,
+    pub goals: HashMap<Owner, Vec<usize>>,
 }
 
 impl Edges {
@@ -217,10 +219,13 @@ impl Edges {
         let max = size * size;
 
         let mut edges = vec![Vec::with_capacity(4); max];
+        let mut goals: HashMap<Owner, Vec<usize>> = HashMap::new();
 
         for i in 0..size {
             for j in 0..size {
                 let id = i + j * size;
+                goals.entry(board.goal(i, j)).or_default().push(id);
+
                 if j > 0 {
                     edges[id].push(id - size);
                 }
@@ -235,18 +240,19 @@ impl Edges {
                 }
             }
         }
-
-        Self { edges }
+        Self { edges, goals }
     }
     fn triangle(board: Board) -> Self {
         let size = board.size;
         let max = 6 * size * size;
         let mut edges = vec![Vec::with_capacity(3); max];
         let (x_size, y_size) = board.grid_dimentions();
+        let mut goals: HashMap<Owner, Vec<usize>> = HashMap::new();
         for y in 0..size * 2 {
             for x in 0..size * 4 {
                 match board.get_tile_id(x, y) {
                     Some(current) => {
+                        goals.entry(board.goal(x, y)).or_default().push(current);
                         if x > 0
                             && let Some(right) = board.get_tile_id(x - 1, y)
                         {
@@ -273,8 +279,7 @@ impl Edges {
                 }
             }
         }
-
-        Self { edges }
+        Self { edges, goals }
     }
 
     pub fn reachable_from(&self, own_id: usize, foe_ids: &[usize]) -> Vec<usize> {
@@ -299,6 +304,38 @@ impl Edges {
     pub fn remove_edge(&mut self, a: usize, b: usize) {
         self.edges[a].retain(|&x| x != b);
         self.edges[b].retain(|&x| x != a);
+    }
+    pub fn are_goals_reachable(&self, players: Query<(&Owner, &Id), With<Character>>) -> bool {
+        for character in players {
+            if !self.can_reach(character) {
+                return false;
+            }
+        }
+        true
+    }
+    fn can_reach(&self, character: (&Owner, &Id)) -> bool {
+        let mut visited = vec![false; self.edges.len()];
+        let mut queue = VecDeque::new();
+        let (owner, id) = character;
+        let goals = self.goals.get(owner).expect("Goals not found");
+
+        visited[id.0] = true;
+        queue.push_back(id.0);
+
+        while let Some(tile) = queue.pop_front() {
+            if goals.contains(&tile) {
+                return true;
+            }
+
+            for &next in self.edges[tile].iter() {
+                if !visited[next] {
+                    visited[next] = true;
+                    queue.push_back(next);
+                }
+            }
+        }
+
+        false
     }
 }
 

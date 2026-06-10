@@ -195,7 +195,8 @@ pub fn setup_game(
                         MeshMaterial2d(theme.foe1.normal.clone()),
                         GridLocation::new(x, y),
                         Id(board.get_tile_id(x, y).expect("Failed to spawn foe1")),
-                        Foe,
+                        Owner::Foe1,
+                        Character,
                     ));
                     let (x, y) = (board.size / 2, board.size - 1);
                     parent.spawn((
@@ -205,7 +206,8 @@ pub fn setup_game(
                         MeshMaterial2d(theme.own.normal.clone()),
                         GridLocation::new(x, y),
                         Id(board.get_tile_id(x, y).expect("Failed to spawn own")),
-                        Own,
+                        Owner::Own,
+                        Character,
                     ));
                 }
                 crate::game_logic::Shape::Triangle => {
@@ -217,7 +219,8 @@ pub fn setup_game(
                         MeshMaterial2d(theme.foe1.normal.clone()),
                         GridLocation::new(x, y),
                         Id(board.get_tile_id(x, y).expect("Failed to spawn foe1")),
-                        Foe,
+                        Owner::Foe1,
+                        Character,
                     ));
                     let gap = match board.size.is_multiple_of(2) {
                         true => 2,
@@ -231,7 +234,8 @@ pub fn setup_game(
                         MeshMaterial2d(theme.foe2.normal.clone()),
                         GridLocation::new(x, y),
                         Id(board.get_tile_id(x, y).expect("Failed to spawn foe2")),
-                        Foe,
+                        Owner::Foe2,
+                        Character,
                     ));
                     let (x, y) = (board.size, 2 * board.size - 1);
                     parent.spawn((
@@ -241,7 +245,8 @@ pub fn setup_game(
                         MeshMaterial2d(theme.own.normal.clone()),
                         GridLocation::new(x, y),
                         Id(board.get_tile_id(x, y).expect("Failed to spawn own")),
-                        Own,
+                        Owner::Own,
+                        Character,
                     ));
                 }
             }

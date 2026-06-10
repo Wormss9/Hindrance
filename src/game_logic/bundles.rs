@@ -8,7 +8,7 @@ use bevy::prelude::*;
 
 #[derive(Bundle)]
 pub struct TileBundle {
-    goal:Goal,
+    goal:Owner,
     id: Id,
     interactable: Interactable,
     mesh: Mesh2d,
@@ -26,7 +26,7 @@ impl TileBundle {
         x: usize,
         y: usize,
         board: Board,
-        goal:Goal,
+        goal:Owner,
     ) -> Self {
         let mesh = match board.shape {
             Shape::Square => Mesh2d(meshes.add(Rectangle::new(board.tile_size, board.tile_size))),

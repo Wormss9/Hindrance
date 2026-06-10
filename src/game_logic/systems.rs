@@ -2,15 +2,16 @@ use crate::{
     colors::Theme,
     game_logic::{
         Edges, WallCount,
-        components::{CounterText, Foe, Goal, Id, Interactable, Own, Pointable, Tile},
+        components::{Character, CounterText, Id, Interactable, Owner, Pointable, Tile},
     },
 };
 use bevy::prelude::*;
 
+#[allow(clippy::type_complexity)]
 pub fn update_reachable_tiles(
     mut query: Query<
         (
-            &Goal,
+            &Owner,
             &mut MeshMaterial2d<ColorMaterial>,
             &Pointable,
             &Id,
@@ -18,18 +19,26 @@ pub fn update_reachable_tiles(
         ),
         With<Tile>,
     >,
-    own_query: Query<&Id, With<Own>>,
-    foe_query: Query<&Id, With<Foe>>,
+    character_query: Query<(&Id, &Owner), With<Character>>,
     theme: Res<Theme>,
     edges: Res<Edges>,
 ) {
-    let Ok(own_location) = own_query.single() else {
-        return;
-    };
+    let mut own_location = None;
+    let mut foe_locations = Vec::new();
 
-    let foe_locations: Vec<usize> = foe_query.iter().map(|id| id.0).collect();
+    for (id, owner) in character_query.iter() {
+        match owner {
+            Owner::None => {}
+            Owner::Own => own_location = Some(id.0),
+            Owner::Foe1 | Owner::Foe2 => {
+                foe_locations.push(id.0);
+            }
+        }
+    }
 
-    let reachable_ids = edges.reachable_from(own_location.0, &foe_locations);
+    let own_location = own_location.expect("Own character not found");
+
+    let reachable_ids = edges.reachable_from(own_location, &foe_locations);
 
     for (goal, mut material, pointable, id, mut interactable) in &mut query {
         let reachable = reachable_ids.contains(&id.0);
@@ -49,7 +58,6 @@ pub fn update_reachable_tiles(
         }
     }
 }
-
 pub fn clean_reachable_tiles(
     mut query: Query<(&mut MeshMaterial2d<ColorMaterial>, &mut Interactable), With<Tile>>,
     theme: Res<Theme>,
@@ -59,7 +67,6 @@ pub fn clean_reachable_tiles(
         interactable.0 = false;
     }
 }
-
 pub fn update_counter_text(counter: Res<WallCount>, mut query: Query<(&mut Text2d, &CounterText)>) {
     if !counter.is_changed() {
         return;
