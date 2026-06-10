@@ -1,14 +1,13 @@
+use crate::{
+    colors::{PointerColorInteraction, Theme},
+    game_logic::resources::Board,
+    shapes::{arrow_mesh, cross_mesh},
+};
 use bevy::{
     camera::ScalingMode,
     core_pipeline::tonemapping::{DebandDither, Tonemapping},
     post_process::bloom::Bloom,
     prelude::*,
-};
-
-use crate::{
-    colors::{PointerColorInteraction, Theme},
-    game_logic::Board,
-    shapes::{arrow_mesh, cross_mesh},
 };
 
 pub struct MainMenuPlugin;

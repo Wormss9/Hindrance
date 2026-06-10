@@ -1,10 +1,6 @@
-use crate::{
-    colors::Theme,
-    game_logic::{
-        Edges, WallCount,
-        components::{Character, CounterText, Id, Interactable, Owner, Pointable, Tile},
-    },
-};
+use super::{components::*, resources::*};
+use crate::{colors::Theme, game_logic::Owner};
+
 use bevy::prelude::*;
 
 #[allow(clippy::type_complexity)]

@@ -1,6 +1,6 @@
+use super::enums::*;
+use crate::{colors::Theme, game_logic::Owner};
 use bevy::prelude::*;
-
-use crate::{colors::Theme, game_logic::{SquareWall, TriangleWall}};
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Interactable(pub bool);
@@ -35,7 +35,6 @@ impl GridLocation {
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Gap(pub Entity);
 
-
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Wall {
     Square(SquareWall),
@@ -55,14 +54,6 @@ impl From<Wall> for Quat {
 pub enum CounterText {
     OWN,
     FOE,
-}
-
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Owner {
-    None,
-    Own,
-    Foe1,
-    Foe2,
 }
 
 impl Owner {

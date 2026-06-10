@@ -1,7 +1,6 @@
-use crate::game_logic::{
-    Board, Edges, SquareWall, TriangleWall, WallCount,
-    components::{Character, Gap, GridLocation, Id, Interactable, Owner, Pointable, Tile, Wall},
-};
+use crate::game_logic::Owner;
+
+use super::{components::*, enums::*, resources::*};
 use bevy::prelude::*;
 use strum::IntoEnumIterator;
 
@@ -205,12 +204,12 @@ fn add_wall(
     *edges = new_edges;
 
     match board.shape {
-        super::Shape::Square => {
+        Shape::Square => {
             for location in SquareWall::iter() {
                 walls.push((id, Wall::Square(location)))
             }
         }
-        super::Shape::Triangle => {
+        Shape::Triangle => {
             for location in TriangleWall::iter() {
                 walls.push((id, Wall::Triangle(location)))
             }

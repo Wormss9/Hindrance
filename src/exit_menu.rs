@@ -1,11 +1,10 @@
-use bevy::prelude::*;
-
 use crate::{
     colors::{PointerColorInteraction, Theme},
-    game_logic::Board,
+    game_logic::resources::Board,
     main_menu::GameState,
     shapes::{arrow_mesh, cross_mesh},
 };
+use bevy::prelude::*;
 
 pub struct ExitMenuPlugin;
 

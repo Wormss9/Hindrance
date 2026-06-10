@@ -3,7 +3,9 @@ use bevy::prelude::*;
 use crate::{
     colors::{PointerColorInteraction, Theme},
     exit_menu::ExitMenuState,
-    game_logic::{bundles::*, components::*, observers::*, systems::*, *},
+    game_logic::{
+        Owner, bundles::*, components::*, enums::*, observers::*, resources::*, systems::*,
+    },
     main_menu::GameState,
     shapes::arrow_mesh,
 };
@@ -12,7 +14,8 @@ pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameState::InGame), setup_game)
+        app.init_state::<Owner>()
+            .add_systems(OnEnter(GameState::InGame), setup_game)
             .add_systems(OnExit(GameState::InGame), cleanup_square)
             .add_systems(
                 Update,
@@ -71,10 +74,10 @@ pub fn setup_game(
             // Counters
             let own_color = materials.get(&theme.own.normal).unwrap().color;
             let foe_colors = match board.shape {
-                crate::game_logic::Shape::Square => {
+                Shape::Square => {
                     vec![materials.get(&theme.foe1.normal).unwrap().color]
                 }
-                crate::game_logic::Shape::Triangle => vec![
+                Shape::Triangle => vec![
                     materials.get(&theme.foe1.normal).unwrap().color,
                     materials.get(&theme.foe2.normal).unwrap().color,
                 ],
@@ -136,8 +139,8 @@ pub fn setup_game(
                     // Walls
                     let mut wall_entities: Vec<(Entity, Wall)> =
                         Vec::with_capacity(match board.shape {
-                            crate::game_logic::Shape::Square => 2,
-                            crate::game_logic::Shape::Triangle => 3,
+                            Shape::Square => 2,
+                            Shape::Triangle => 3,
                         });
 
                     for wall_position in board.get_walls(x, y) {
@@ -186,7 +189,7 @@ pub fn setup_game(
                 }
             }
             match board.shape {
-                crate::game_logic::Shape::Square => {
+                Shape::Square => {
                     let (x, y) = (board.size / 2, 0);
                     parent.spawn((
                         Mesh2d(meshes.add(Circle::new(board.tile_size / 2.))),
@@ -210,7 +213,7 @@ pub fn setup_game(
                         Character,
                     ));
                 }
-                crate::game_logic::Shape::Triangle => {
+                Shape::Triangle => {
                     let (x, y) = (board.size, board.size / 2);
                     parent.spawn((
                         Mesh2d(meshes.add(Circle::new(board.tile_size / 3.))),

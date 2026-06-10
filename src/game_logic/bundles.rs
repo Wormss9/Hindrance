@@ -1,14 +1,10 @@
-use crate::{
-    colors::Theme,
-    game_logic::{Board, Shape},
-};
-
-use super::components::*;
+use super::{components::*, enums::*, resources::*};
+use crate::{colors::Theme, game_logic::Owner};
 use bevy::prelude::*;
 
 #[derive(Bundle)]
 pub struct TileBundle {
-    goal:Owner,
+    goal: Owner,
     id: Id,
     interactable: Interactable,
     mesh: Mesh2d,
@@ -26,7 +22,7 @@ impl TileBundle {
         x: usize,
         y: usize,
         board: Board,
-        goal:Owner,
+        goal: Owner,
     ) -> Self {
         let mesh = match board.shape {
             Shape::Square => Mesh2d(meshes.add(Rectangle::new(board.tile_size, board.tile_size))),
