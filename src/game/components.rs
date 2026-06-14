@@ -1,5 +1,4 @@
-use super::enums::*;
-use crate::{colors::Theme, game_logic::Owner};
+use super::{Owner, enums::*, resources::*};
 use bevy::prelude::*;
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]

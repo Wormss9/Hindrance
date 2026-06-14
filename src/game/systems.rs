@@ -1,6 +1,4 @@
-use super::{components::*, resources::*};
-use crate::{colors::Theme, game_logic::Owner};
-
+use super::{Owner, components::*, resources::*};
 use bevy::prelude::*;
 
 #[allow(clippy::type_complexity)]

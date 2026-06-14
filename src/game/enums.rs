@@ -1,11 +1,6 @@
 use bevy::prelude::*;
 use strum::EnumIter;
 
-#[derive(Clone, Copy)]
-pub enum Shape {
-    Square,
-    Triangle,
-}
 
 #[derive(EnumIter, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SquareWall {

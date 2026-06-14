@@ -1,5 +1,5 @@
-use super::{components::*, enums::*, resources::*};
-use crate::{colors::Theme, game_logic::Owner};
+use super::{Owner, components::*, resources::*};
+use crate::shapes::{Shape, ShapeTrait};
 use bevy::prelude::*;
 
 #[derive(Bundle)]
@@ -21,12 +21,14 @@ impl TileBundle {
         theme: &Theme,
         x: usize,
         y: usize,
-        board: Board,
+        board: &Board,
         goal: Owner,
     ) -> Self {
         let mesh = match board.shape {
-            Shape::Square => Mesh2d(meshes.add(Rectangle::new(board.tile_size, board.tile_size))),
-            Shape::Triangle => {
+            Shape::Square(_) => {
+                Mesh2d(meshes.add(Rectangle::new(board.tile_size, board.tile_size)))
+            }
+            Shape::Hexagon(_) => {
                 Mesh2d(meshes.add(RegularPolygon::new(board.tile_size / (3.0_f32).sqrt(), 3)))
             }
         };
@@ -34,7 +36,7 @@ impl TileBundle {
         let color = goal.to_color(theme);
         Self {
             goal,
-            id: Id(board.get_tile_id(x, y).expect("Board spawning failed!")),
+            id: Id(board.get_id(x, y).expect("Board spawning failed!")),
             interactable: Interactable(false),
             mesh,
             mesh_material: MeshMaterial2d(color),
@@ -63,37 +65,37 @@ impl WallBundle {
         theme: &Theme,
         x: usize,
         y: usize,
-        board: Board,
-        wall: Wall,
+        board: &Board,
+        &wall: &Wall,
     ) -> Self {
-        let (mid_x, mid_y) = board.get_mids();
-        let square_translation = Vec3::new(
-            board.get_x_offset() * (x as f32 - mid_x as f32) + board.get_x_offset() / 2.,
-            board.get_y_offset() * (mid_y as f32 - y as f32) - board.get_y_offset() / 2.,
-            0.,
-        );
-        let triangle_transform = board.into_tile_transform(x, y).translation
-            + Vec3 {
-                x: 0.,
-                y: -board.tile_size * (3.0_f32).sqrt() / 3.0
-                    - board.get_triangle_rotation_offset() / 2.
-                    - board.gap_size / 2.,
-                z: 0.,
-            };
+        let (mid_x, mid_y) = board.shape.grid_mids();
         let transform = Transform {
-            translation: match wall {
-                Wall::Square(_) => square_translation,
-                Wall::Triangle(_) => triangle_transform,
+            translation: match &board.shape {
+                Shape::Square(_) => Vec3::new(
+                    board.get_x_offset() * (x as f32 - mid_x as f32) + board.get_x_offset() / 2.,
+                    board.get_y_offset() * (mid_y as f32 - y as f32) - board.get_y_offset() / 2.,
+                    0.,
+                ),
+                Shape::Hexagon(hexagon) => {
+                    board.into_tile_transform(x, y).translation
+                        + Vec3 {
+                            x: 0.,
+                            y: -board.tile_size * (3.0_f32).sqrt() / 3.0
+                                - hexagon.get_triangle_rotation_offset(board.tile_size) / 2.
+                                - board.gap_size / 2.,
+                            z: 0.,
+                        }
+                }
             },
-            rotation: wall.into(),
+            rotation: wall.clone().into(),
             ..default()
         };
-        let id = board.get_tile_id(x, y).expect("Failed to spawn wall");
+        let id = board.get_id(x, y).expect("Failed to spawn wall");
         let mesh = Mesh2d(meshes.add(Rectangle::new(
             board.tile_size * 2.
                 + match board.shape {
-                    Shape::Square => board.gap_size,
-                    Shape::Triangle => board.gap_size * (3.0_f32).sqrt(),
+                    Shape::Square(_) => board.gap_size,
+                    Shape::Hexagon(_) => board.gap_size * (3.0_f32).sqrt(),
                 },
             board.gap_size,
         )));
@@ -124,7 +126,7 @@ pub struct GapBundle {
 impl GapBundle {
     pub fn new(
         meshes: &mut ResMut<'_, Assets<Mesh>>,
-        board: Board,
+        board: &Board,
         x: usize,
         y: usize,
         wall_entity: Entity,
@@ -143,25 +145,27 @@ impl GapBundle {
             z: 0.,
         });
 
-        let (mid_x, mid_y) = board.get_mids();
-        let square_translation = Vec3::new(
-            board.get_x_offset() * (x as f32 - mid_x as f32) + board.get_x_offset() / 2.,
-            board.get_y_offset() * (mid_y as f32 - y as f32) - board.get_y_offset() / 2.,
-            0.,
-        );
-        let triangle_transform = board.into_tile_transform(x, y).translation
-            + Vec3 {
-                x: 0.,
-                y: -board.tile_size * (3.0_f32).sqrt() / 3.0
-                    - board.get_triangle_rotation_offset() / 2.
-                    - board.gap_size / 2.,
-                z: 0.,
-            };
+        let (mid_x, mid_y) = board.shape.grid_mids();
         let transform = Transform {
             translation: translation
-                + match wall {
-                    Wall::Square(_) => square_translation,
-                    Wall::Triangle(_) => triangle_transform,
+                + match &board.shape {
+                    Shape::Square(_) => Vec3::new(
+                        board.get_x_offset() * (x as f32 - mid_x as f32)
+                            + board.get_x_offset() / 2.,
+                        board.get_y_offset() * (mid_y as f32 - y as f32)
+                            - board.get_y_offset() / 2.,
+                        0.,
+                    ),
+                    Shape::Hexagon(hexagon) => {
+                        board.into_tile_transform(x, y).translation
+                            + Vec3 {
+                                x: 0.,
+                                y: -board.tile_size * (3.0_f32).sqrt() / 3.0
+                                    - hexagon.get_triangle_rotation_offset(board.tile_size) / 2.
+                                    - board.gap_size / 2.,
+                                z: 0.,
+                            }
+                    }
                 },
             rotation: wall.into(),
             ..default()
@@ -169,7 +173,7 @@ impl GapBundle {
 
         Self {
             gap: Gap(wall_entity),
-            id: Id(board.get_tile_id(x, y).expect("Failed to spawn gap")),
+            id: Id(board.get_id(x, y).expect("Failed to spawn gap")),
             location: GridLocation { x, y },
             mesh,
             pickable: Pickable::default(),

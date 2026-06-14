@@ -1,6 +1,6 @@
-use crate::game_logic::Owner;
+use crate::shapes::{Shape, ShapeTrait};
 
-use super::{components::*, enums::*, resources::*};
+use super::{Owner, components::*, enums::*, resources::*};
 use bevy::prelude::*;
 use strum::IntoEnumIterator;
 
@@ -111,6 +111,12 @@ pub fn place_wall(
     board: Res<Board>,
 ) {
     let target = event.event_target();
+    // let x = event.button;
+    // match x {
+    //     PointerButton::Primary => todo!(),
+    //     PointerButton::Secondary => todo!(),
+    //     PointerButton::Middle => todo!(),
+    // }
     let (id, location, rotation) = target_query
         .get(target)
         .expect("Failed to get clicked gap!");
@@ -144,55 +150,43 @@ fn add_wall(
     match rotation {
         Wall::Square(square_wall) => match square_wall {
             SquareWall::Right => {
+                new_edges.remove_edge(board.get_id(x, y).unwrap(), board.get_id(x + 1, y).unwrap());
                 new_edges.remove_edge(
-                    board.get_tile_id(x, y).unwrap(),
-                    board.get_tile_id(x + 1, y).unwrap(),
-                );
-                new_edges.remove_edge(
-                    board.get_tile_id(x, y + 1).unwrap(),
-                    board.get_tile_id(x + 1, y + 1).unwrap(),
+                    board.get_id(x, y + 1).unwrap(),
+                    board.get_id(x + 1, y + 1).unwrap(),
                 );
             }
             SquareWall::Down => {
+                new_edges.remove_edge(board.get_id(x, y).unwrap(), board.get_id(x, y + 1).unwrap());
                 new_edges.remove_edge(
-                    board.get_tile_id(x, y).unwrap(),
-                    board.get_tile_id(x, y + 1).unwrap(),
-                );
-                new_edges.remove_edge(
-                    board.get_tile_id(x + 1, y).unwrap(),
-                    board.get_tile_id(x + 1, y + 1).unwrap(),
+                    board.get_id(x + 1, y).unwrap(),
+                    board.get_id(x + 1, y + 1).unwrap(),
                 );
             }
         },
         Wall::Triangle(triangle_wall) => match triangle_wall {
             TriangleWall::Down => {
                 new_edges.remove_edge(
-                    board.get_tile_id(x - 1, y).unwrap(),
-                    board.get_tile_id(x - 2, y + 1).unwrap(),
+                    board.get_id(x - 1, y).unwrap(),
+                    board.get_id(x - 2, y + 1).unwrap(),
                 );
                 new_edges.remove_edge(
-                    board.get_tile_id(x + 1, y).unwrap(),
-                    board.get_tile_id(x, y + 1).unwrap(),
+                    board.get_id(x + 1, y).unwrap(),
+                    board.get_id(x, y + 1).unwrap(),
                 );
             }
             TriangleWall::UpRight => {
+                new_edges.remove_edge(board.get_id(x, y).unwrap(), board.get_id(x - 1, y).unwrap());
                 new_edges.remove_edge(
-                    board.get_tile_id(x, y).unwrap(),
-                    board.get_tile_id(x - 1, y).unwrap(),
-                );
-                new_edges.remove_edge(
-                    board.get_tile_id(x, y + 1).unwrap(),
-                    board.get_tile_id(x - 1, y + 1).unwrap(),
+                    board.get_id(x, y + 1).unwrap(),
+                    board.get_id(x - 1, y + 1).unwrap(),
                 );
             }
             TriangleWall::DownRight => {
+                new_edges.remove_edge(board.get_id(x, y).unwrap(), board.get_id(x + 1, y).unwrap());
                 new_edges.remove_edge(
-                    board.get_tile_id(x, y).unwrap(),
-                    board.get_tile_id(x + 1, y).unwrap(),
-                );
-                new_edges.remove_edge(
-                    board.get_tile_id(x - 1, y + 1).unwrap(),
-                    board.get_tile_id(x - 2, y + 1).unwrap(),
+                    board.get_id(x - 1, y + 1).unwrap(),
+                    board.get_id(x - 2, y + 1).unwrap(),
                 );
             }
         },
@@ -204,12 +198,12 @@ fn add_wall(
     *edges = new_edges;
 
     match board.shape {
-        Shape::Square => {
+        Shape::Square(_) => {
             for location in SquareWall::iter() {
                 walls.push((id, Wall::Square(location)))
             }
         }
-        Shape::Triangle => {
+        Shape::Hexagon(_) => {
             for location in TriangleWall::iter() {
                 walls.push((id, Wall::Triangle(location)))
             }
@@ -219,21 +213,21 @@ fn add_wall(
         Wall::Square(square_wall) => match square_wall {
             SquareWall::Right => {
                 if y > 0
-                    && let Some(id) = board.get_tile_id(x, y - 1)
+                    && let Some(id) = board.get_id(x, y - 1)
                 {
                     walls.push((Id(id), Wall::Square(square_wall)))
                 }
-                if let Some(id) = board.get_tile_id(x, y + 1) {
+                if let Some(id) = board.get_id(x, y + 1) {
                     walls.push((Id(id), Wall::Square(square_wall)))
                 }
             }
             SquareWall::Down => {
                 if x > 0
-                    && let Some(id) = board.get_tile_id(x - 1, y)
+                    && let Some(id) = board.get_id(x - 1, y)
                 {
                     walls.push((Id(id), Wall::Square(square_wall)))
                 }
-                if let Some(id) = board.get_tile_id(x + 1, y) {
+                if let Some(id) = board.get_id(x + 1, y) {
                     walls.push((Id(id), Wall::Square(square_wall)))
                 }
             }
@@ -241,33 +235,33 @@ fn add_wall(
         Wall::Triangle(triangle_wall) => match triangle_wall {
             TriangleWall::Down => {
                 if x > 1
-                    && let Some(id) = board.get_tile_id(x - 2, y)
+                    && let Some(id) = board.get_id(x - 2, y)
                 {
                     walls.push((Id(id), Wall::Triangle(triangle_wall)))
                 }
-                if let Some(id) = board.get_tile_id(x + 2, y) {
+                if let Some(id) = board.get_id(x + 2, y) {
                     walls.push((Id(id), Wall::Triangle(triangle_wall)))
                 }
             }
             TriangleWall::UpRight => {
                 if y > 0
                     && x > 0
-                    && let Some(id) = board.get_tile_id(x, y - 1)
+                    && let Some(id) = board.get_id(x, y - 1)
                 {
                     walls.push((Id(id), Wall::Triangle(triangle_wall)))
                 }
-                if let Some(id) = board.get_tile_id(x, y + 1) {
+                if let Some(id) = board.get_id(x, y + 1) {
                     walls.push((Id(id), Wall::Triangle(triangle_wall)))
                 }
             }
             TriangleWall::DownRight => {
                 if y > 0
-                    && let Some(id) = board.get_tile_id(x + 2, y - 1)
+                    && let Some(id) = board.get_id(x + 2, y - 1)
                 {
                     walls.push((Id(id), Wall::Triangle(triangle_wall)))
                 }
                 if x > 1
-                    && let Some(id) = board.get_tile_id(x - 2, y + 1)
+                    && let Some(id) = board.get_id(x - 2, y + 1)
                 {
                     walls.push((Id(id), Wall::Triangle(triangle_wall)))
                 }
@@ -288,4 +282,30 @@ fn add_wall(
     }
     wall_count.own -= 1;
     true
+}
+
+pub trait PointerColorInteraction {
+    fn with_color_set(&mut self, color: &ColorSet) -> &mut Self;
+}
+
+impl<'w> PointerColorInteraction for EntityCommands<'w> {
+    fn with_color_set(&mut self, color: &ColorSet) -> &mut Self {
+        self.observe(update_material_on::<Pointer<Over>>(color.light.clone()))
+            .observe(update_material_on::<Pointer<Out>>(color.normal.clone()))
+            .observe(update_material_on::<Pointer<Press>>(color.dark.clone()))
+            .observe(update_material_on::<Pointer<Release>>(color.light.clone()))
+            .insert(MeshMaterial2d(color.normal.clone()));
+
+        self
+    }
+}
+
+fn update_material_on<E: EntityEvent>(
+    new_material: Handle<ColorMaterial>,
+) -> impl Fn(On<E>, Query<&mut MeshMaterial2d<ColorMaterial>>) {
+    move |event, mut query| {
+        if let Ok(mut material) = query.get_mut(event.event_target()) {
+            material.0 = new_material.clone();
+        }
+    }
 }

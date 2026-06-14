@@ -1,31 +1,17 @@
 use crate::{
-    colors::{PointerColorInteraction, Theme},
-    game_logic::resources::Board,
-    shapes::{arrow_mesh, cross_mesh},
+    game::{observers::*, resources::*, states::*},
+    meshes::{arrow_mesh, cross_mesh},
 };
-use bevy::{
-    camera::ScalingMode,
-    core_pipeline::tonemapping::{DebandDither, Tonemapping},
-    post_process::bloom::Bloom,
-    prelude::*,
-};
+use bevy::prelude::*;
 
 pub struct MainMenuPlugin;
 
 impl Plugin for MainMenuPlugin {
     fn build(&self, app: &mut App) {
         app.init_state::<GameState>()
-            .add_systems(Startup, add_camera)
             .add_systems(OnEnter(GameState::MainMenu), setup_main_menu)
             .add_systems(OnExit(GameState::MainMenu), cleanup_main_menu);
     }
-}
-
-#[derive(States, Debug, Clone, PartialEq, Eq, Hash, Default)]
-pub enum GameState {
-    #[default]
-    MainMenu,
-    InGame,
 }
 
 #[derive(Resource)]
@@ -33,27 +19,6 @@ struct MainMenuData {
     main_menu_entity: Entity,
 }
 
-pub fn add_camera(mut commands: Commands) {
-    commands.spawn((
-        Camera2d,
-        Camera {
-            clear_color: ClearColorConfig::Custom(Color::BLACK),
-            ..default()
-        },
-        Projection::Orthographic(OrthographicProjection {
-            scaling_mode: ScalingMode::FixedVertical {
-                viewport_height: 720.,
-            },
-            ..OrthographicProjection::default_2d()
-        }),
-        Tonemapping::None,
-        Bloom {
-            intensity: 0.25,
-            ..Default::default()
-        },
-        DebandDither::Enabled,
-    ));
-}
 pub fn setup_main_menu(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -73,7 +38,7 @@ pub fn setup_main_menu(
                     |_: On<Pointer<Release>>,
                      mut next_state: ResMut<NextState<GameState>>,
                      mut commands: Commands| {
-                        commands.insert_resource(Board::SQUARE_BOARD);
+                        commands.insert_resource(Board::new_square());
                         next_state.set(GameState::InGame);
                     },
                 );
@@ -88,7 +53,7 @@ pub fn setup_main_menu(
                     |_: On<Pointer<Release>>,
                      mut next_state: ResMut<NextState<GameState>>,
                      mut commands: Commands| {
-                        commands.insert_resource(Board::TRIANGLE_BOARD);
+                        commands.insert_resource(Board::new_triangle());
                         next_state.set(GameState::InGame);
                     },
                 );

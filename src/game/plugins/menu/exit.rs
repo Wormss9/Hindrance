@@ -1,8 +1,6 @@
 use crate::{
-    colors::{PointerColorInteraction, Theme},
-    game_logic::resources::Board,
-    main_menu::GameState,
-    shapes::{arrow_mesh, cross_mesh},
+    game::{observers::*, resources::*, states::*},
+    meshes::{arrow_mesh, cross_mesh},
 };
 use bevy::prelude::*;
 
@@ -14,13 +12,6 @@ impl Plugin for ExitMenuPlugin {
             .add_systems(OnEnter(ExitMenuState::Exiting), setup_exit_menu)
             .add_systems(OnExit(ExitMenuState::Exiting), cleanup_exit_menu);
     }
-}
-
-#[derive(States, Debug, Clone, PartialEq, Eq, Hash, Default)]
-pub enum ExitMenuState {
-    #[default]
-    False,
-    Exiting,
 }
 
 #[derive(Resource)]
