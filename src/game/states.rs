@@ -4,6 +4,7 @@ use bevy::prelude::*;
 pub enum GameState {
     #[default]
     MainMenu,
+    InLobby,
     InGame,
 }
 
@@ -13,3 +14,12 @@ pub enum ExitMenuState {
     False,
     Exiting,
 }
+
+#[derive(States, Debug, Clone, PartialEq, Eq, Hash, Default)]
+pub enum HostingState {
+    #[default]
+    False,
+    Joining,
+    Hosting,
+}
+

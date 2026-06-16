@@ -1,20 +1,22 @@
 #!/usr/bin/env bash
 set -e
 
-mkdir -p target/dist/linux
-mkdir -p target/dist/windows
+rm -r target/dist
 
-cargo build --release
-cargo build --release --target x86_64-pc-windows-gnu
+mkdir -p target/dist/linux/assets
+mkdir -p target/dist/windows/assets
 
-cp target/release/Hindrance \
-   target/dist/linux/
+cargo build --release --no-default-features
+cargo build --release --target x86_64-pc-windows-gnu --no-default-features
 
-cp target/x86_64-pc-windows-gnu/release/Hindrance.exe \
-   target/dist/windows/
+cp target/release/Hindrance target/dist/linux/
+cp target/x86_64-pc-windows-gnu/release/Hindrance.exe target/dist/windows/
 
-cp "$(find . -name libsteam_api.so | head -n1)" \
-   target/dist/linux/
+cp assets/icon.png target/dist/linux/assets/
+cp assets/icon.png target/dist/windows/assets/
 
-cp "$(find . -name steam_api64.dll | head -n1)" \
-   target/dist/windows/
+cp assets/Jost-SemiBold.ttf target/dist/linux/assets/
+cp assets/Jost-SemiBold.ttf target/dist/windows/assets/
+
+cp assets/libsteam_api.so target/dist/linux/
+cp assets/steam_api64.dll target/dist/windows/

@@ -1,5 +1,5 @@
 use crate::{
-    game::{Owner, bundles::*, components::*, observers::*, resources::*, states::*, systems::*},
+    game::{Owner, bundles::*, components::*, messages::*, observers::*, resources::*, states::*, systems::*},
     meshes::arrow_mesh,
     shapes::{Shape, ShapeTrait},
 };
@@ -10,6 +10,7 @@ pub struct GamePlugin;
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app.init_state::<Owner>()
+            .add_message::<StartGame>()
             .add_systems(OnEnter(GameState::InGame), setup_game)
             .add_systems(OnExit(GameState::InGame), cleanup_square)
             .add_systems(
@@ -78,13 +79,22 @@ pub fn setup_game(
 
             // Counters
             let own_color = materials.get(&theme.own.normal).unwrap().color;
-            let foe_colors = match board.shape {
+            let foes = match board.shape {
                 Shape::Square(_) => {
-                    vec![materials.get(&theme.foe1.normal).unwrap().color]
+                    vec![(
+                        Owner::Foe1,
+                        materials.get(&theme.foe1.normal).unwrap().color,
+                    )]
                 }
                 Shape::Hexagon(_) => vec![
-                    materials.get(&theme.foe1.normal).unwrap().color,
-                    materials.get(&theme.foe2.normal).unwrap().color,
+                    (
+                        Owner::Foe2,
+                        materials.get(&theme.foe1.normal).unwrap().color,
+                    ),
+                    (
+                        Owner::Foe2,
+                        materials.get(&theme.foe2.normal).unwrap().color,
+                    ),
                 ],
             };
             parent.spawn((
@@ -103,10 +113,10 @@ pub fn setup_game(
                     ),
                     ..default()
                 },
-                CounterText::OWN,
+                CounterText(Owner::Own),
             ));
-            let foe_ammount = foe_colors.len() as f32;
-            for (foe_number, foe_color) in foe_colors.into_iter().enumerate() {
+            let foe_ammount = foes.len() as f32;
+            for (foe_number, (foe, foe_color)) in foes.into_iter().enumerate() {
                 parent.spawn((
                     Text2d::new(board.max_walls.to_string()),
                     TextColor(foe_color),
@@ -123,7 +133,7 @@ pub fn setup_game(
                         ),
                         ..default()
                     },
-                    CounterText::FOE,
+                    CounterText(foe),
                     Id(foe_number),
                 ));
             }

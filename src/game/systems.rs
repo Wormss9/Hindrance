@@ -1,5 +1,5 @@
-use super::{Owner, components::*, resources::*};
-use bevy::prelude::*;
+use super::{Owner, components::*, messages::*, resources::*, states::*};
+use bevy::{prelude::*, state::commands};
 
 #[allow(clippy::type_complexity)]
 pub fn update_reachable_tiles(
@@ -66,13 +66,21 @@ pub fn update_counter_text(counter: Res<WallCount>, mut query: Query<(&mut Text2
         return;
     }
     for (mut text, counter_side) in &mut query {
-        match counter_side {
-            CounterText::OWN => {
-                *text = Text2d::new(counter.own.to_string());
-            }
-            CounterText::FOE => {
-                *text = Text2d::new(counter.foe.to_string());
-            }
-        }
+        *text = Text2d::new(counter.counts.get(&counter_side.0).unwrap().to_string());
+    }
+}
+
+pub fn start_game(
+    mut commands: Commands,
+    mut start_message: MessageReader<StartGame>,
+    mut game_state: ResMut<NextState<GameState>>,
+) {
+    for message in start_message.read() {
+        let board = match &message.shape {
+            crate::shapes::Shape::Square(_) => Board::new_square(),
+            crate::shapes::Shape::Hexagon(_) => Board::new_triangle(),
+        };
+        commands.insert_resource(board);
+        game_state.set(GameState::InGame);
     }
 }

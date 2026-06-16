@@ -36,10 +36,12 @@ pub fn setup_main_menu(
                 .with_color_set(&theme.own)
                 .observe(
                     |_: On<Pointer<Release>>,
-                     mut next_state: ResMut<NextState<GameState>>,
+                     mut hosting_state: ResMut<NextState<HostingState>>,
+                     mut game_state: ResMut<NextState<GameState>>,
                      mut commands: Commands| {
-                        commands.insert_resource(Board::new_square());
-                        next_state.set(GameState::InGame);
+                        commands.insert_resource(ServerState::new(Board::new_square()));
+                        hosting_state.set(HostingState::Hosting);
+                        game_state.set(GameState::InLobby);
                     },
                 );
             parent
@@ -51,10 +53,12 @@ pub fn setup_main_menu(
                 .with_color_set(&theme.foe1)
                 .observe(
                     |_: On<Pointer<Release>>,
-                     mut next_state: ResMut<NextState<GameState>>,
+                     mut hosting_state: ResMut<NextState<HostingState>>,
+                     mut game_state: ResMut<NextState<GameState>>,
                      mut commands: Commands| {
-                        commands.insert_resource(Board::new_triangle());
-                        next_state.set(GameState::InGame);
+                        commands.insert_resource(ServerState::new(Board::new_triangle()));
+                        hosting_state.set(HostingState::Hosting);
+                        game_state.set(GameState::InLobby);
                     },
                 );
             parent
@@ -63,7 +67,17 @@ pub fn setup_main_menu(
                     Transform::from_translation(Vec3::new(0., -50., 0.)),
                     Pickable::default(),
                 ))
-                .with_color_set(&theme.misc);
+                .with_color_set(&theme.misc)
+                .observe(
+                    |_: On<Pointer<Release>>,
+                     mut hosting_state: ResMut<NextState<HostingState>>,
+                     mut game_state: ResMut<NextState<GameState>>,
+                     mut commands: Commands| {
+                        commands.insert_resource(Board::new_square());
+                        hosting_state.set(HostingState::Joining);
+                        game_state.set(GameState::InLobby);
+                    },
+                );
             parent
                 .spawn((
                     Mesh2d(meshes.add(cross_mesh(32.0))),

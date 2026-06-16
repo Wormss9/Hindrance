@@ -87,7 +87,7 @@ impl WallBundle {
                         }
                 }
             },
-            rotation: wall.clone().into(),
+            rotation: wall.into(),
             ..default()
         };
         let id = board.get_id(x, y).expect("Failed to spawn wall");

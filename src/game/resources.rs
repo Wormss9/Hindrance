@@ -2,7 +2,9 @@ use super::{Owner, components::*, enums::*};
 use crate::shapes::{Hexagon, Shape, ShapeTrait, Square};
 use bevy::prelude::*;
 use bevy::{ecs::resource::Resource, platform::collections::HashMap};
+use bevy_steamworks::{Client, SteamId};
 use std::collections::VecDeque;
+use strum::IntoEnumIterator;
 
 const SQUARE_SIZE: usize = 9;
 const TRIANGLE_SIZE: usize = 4;
@@ -11,13 +13,16 @@ const GAP_SIZE: f32 = 15.;
 
 #[derive(Resource)]
 pub struct WallCount {
-    pub own: usize,
-    pub foe: usize,
+    pub counts: HashMap<Owner, usize>,
 }
 
 impl WallCount {
     pub fn new(max: usize) -> Self {
-        Self { own: max, foe: max }
+        let mut counts = HashMap::new();
+        for owner in Owner::iter() {
+            counts.insert(owner, max);
+        }
+        Self { counts }
     }
 }
 
@@ -192,22 +197,22 @@ impl ShapeTrait for Board {
         self.shape.grid_mids()
     }
 
-    fn rotate(&self, id: usize, owner: &Owner) -> (usize, Option<usize>) {
-        self.shape.rotate(id, owner)
+    fn rotate_tile(&self, id: usize, owner: &Owner) -> (usize, Option<usize>) {
+        self.shape.rotate_tile(id, owner)
     }
 }
 
 impl Board {
-    pub fn new_square() -> Board {
-        Board {
+    pub fn new_square() -> Self {
+        Self {
             tile_size: TILE_SIZE,
             gap_size: GAP_SIZE,
             shape: Shape::Square(Square::from(SQUARE_SIZE)),
             max_walls: 10,
         }
     }
-    pub fn new_triangle() -> Board {
-        Board {
+    pub fn new_triangle() -> Self {
+        Self {
             tile_size: TILE_SIZE,
             gap_size: GAP_SIZE,
             shape: Shape::Hexagon(Hexagon::from(TRIANGLE_SIZE)),
@@ -305,6 +310,16 @@ pub struct Fonts {
     pub jost_semibold: Handle<Font>,
 }
 
+impl FromWorld for Fonts {
+    fn from_world(world: &mut World) -> Self {
+        let asset_server = world.resource::<AssetServer>();
+
+        Self {
+            jost_semibold: asset_server.load("Jost-SemiBold.ttf"),
+        }
+    }
+}
+
 #[derive(Resource)]
 pub struct Theme {
     pub own: ColorSet,
@@ -346,11 +361,19 @@ impl Theme {
     }
 }
 
+impl FromWorld for Theme {
+    fn from_world(world: &mut World) -> Self {
+        let mut materials = world.resource_mut::<Assets<ColorMaterial>>();
+
+        Self::new(&mut materials)
+    }
+}
 pub struct ColorSet {
     pub normal: Handle<ColorMaterial>,
     pub light: Handle<ColorMaterial>,
     pub dark: Handle<ColorMaterial>,
 }
+
 impl ColorSet {
     pub fn new(materials: &mut Mut<Assets<ColorMaterial>>, base: Color, luminance: f32) -> Self {
         Self {
@@ -364,6 +387,65 @@ impl ColorSet {
             normal: materials.add(base),
             light: materials.add(base),
             dark: materials.add(base),
+        }
+    }
+}
+
+#[derive(Resource, Default, Debug)]
+pub struct BoardPlayers {
+    pub players: HashMap<Owner, BoardPlayer>,
+}
+
+#[derive(Debug)]
+pub struct BoardPlayer {
+    pub steam_id: u64,
+    pub name: String,
+    pub picture: Vec<u8>,
+}
+
+impl BoardPlayer {
+    pub fn from_id(steam_id: u64, steam_client: &Client) -> Self {
+        let id: SteamId = SteamId::from_raw(steam_id);
+        let me = steam_client.friends().get_friend(id);
+        let name = me.name();
+        let picture = me.medium_avatar().unwrap_or_default();
+        Self {
+            steam_id,
+            name,
+            picture,
+        }
+    }
+}
+
+#[derive(Resource)]
+pub struct ServerState {
+    pub players: HashMap<u64, (u64, Owner)>,
+    pub timers: HashMap<Owner, Timer>,
+    pub start_timer: Timer,
+    pub shape: Shape,
+    pub edges: Edges,
+}
+
+impl ServerState {
+    pub fn new(board: Board) -> Self {
+        let players = HashMap::new();
+        let edges: Edges = board.clone().into();
+        let shape = board.shape;
+        let mut timers = HashMap::new();
+        for owner in Owner::iter() {
+            let mut timer = Timer::from_seconds(300., TimerMode::Once);
+            timer.pause();
+            timers.insert(owner, timer.clone());
+        }
+        let mut start_timer = Timer::from_seconds(3., TimerMode::Once);
+        start_timer.pause();
+
+        Self {
+            players,
+            shape,
+            edges,
+            timers,
+            start_timer,
         }
     }
 }

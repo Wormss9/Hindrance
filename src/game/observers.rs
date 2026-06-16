@@ -52,6 +52,9 @@ pub fn move_own(
     own_querry: Query<((&mut Transform, &mut Id), &Owner), With<Character>>,
     tile: Query<(&Interactable, &Transform, &Id), (With<Tile>, Without<Character>)>,
 ) {
+    if event.button != PointerButton::Primary {
+        return;
+    }
     let mut own = None;
 
     let (interactable, target_transform, tile_id) = tile
@@ -111,12 +114,9 @@ pub fn place_wall(
     board: Res<Board>,
 ) {
     let target = event.event_target();
-    // let x = event.button;
-    // match x {
-    //     PointerButton::Primary => todo!(),
-    //     PointerButton::Secondary => todo!(),
-    //     PointerButton::Middle => todo!(),
-    // }
+    if event.button != PointerButton::Secondary {
+        return;
+    }
     let (id, location, rotation) = target_query
         .get(target)
         .expect("Failed to get clicked gap!");
@@ -140,7 +140,7 @@ fn add_wall(
     mut edges: ResMut<Edges>,
     board: Res<Board>,
 ) -> bool {
-    if wall_count.own == 0 {
+    if wall_count.counts.get(&Owner::Own) == Some(&0) {
         return false;
     }
     let mut walls = Vec::new();
@@ -280,7 +280,7 @@ fn add_wall(
     for entity in gaps_to_despawn {
         commands.entity(entity).despawn();
     }
-    wall_count.own -= 1;
+    *wall_count.counts.get_mut(&Owner::Own).unwrap() -= 1;
     true
 }
 

@@ -1,4 +1,4 @@
-use crate::game::resources::Fonts;
+use crate::game::{components::*, resources::*};
 use bevy::{
     camera::ScalingMode,
     core_pipeline::tonemapping::{DebandDither, Tonemapping},
@@ -13,13 +13,14 @@ pub struct SetupPlugin;
 
 impl Plugin for SetupPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, set_window_icon)
+        app.init_resource::<Fonts>()
+            .add_systems(Startup, set_window_icon)
             .add_systems(Startup, add_camera)
-            .add_systems(Startup, load_fonts);
+            .add_systems(Update, update_countdown);
     }
 }
 
-pub fn set_window_icon(_marker: NonSendMarker) {
+fn set_window_icon(_marker: NonSendMarker) {
     WINIT_WINDOWS.with_borrow(|winit_windows| {
         if winit_windows.windows.len() == 0 {
             return;
@@ -44,7 +45,7 @@ pub fn set_window_icon(_marker: NonSendMarker) {
     });
 }
 
-pub fn add_camera(mut commands: Commands) {
+fn add_camera(mut commands: Commands) {
     commands.spawn((
         Camera2d,
         Camera {
@@ -66,8 +67,16 @@ pub fn add_camera(mut commands: Commands) {
     ));
 }
 
-fn load_fonts(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.insert_resource(Fonts {
-        jost_semibold: asset_server.load("Jost-SemiBold.ttf"),
-    });
+fn update_countdown(counters: Query<(&mut Countdown, &mut Text2d)>, time: Res<Time>) {
+    for (mut countdown, mut text) in counters {
+        countdown.timer.tick(time.delta());
+        let time = countdown.timer.remaining_secs();
+        let decimals = ((time.fract() * 100.0).trunc()) as u32;
+        let time_text = if time > 60. {
+            format!("{:.0}:{:02.0}:{:02.0}", time / 60., time % 60., decimals)
+        } else {
+            format!("{:.0}:{:02.0}", time, decimals)
+        };
+        text.0 = time_text;
+    }
 }

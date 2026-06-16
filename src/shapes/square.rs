@@ -1,22 +1,24 @@
+use serde::{Deserialize, Serialize};
+
 use crate::game::Owner;
 
 use super::ShapeTrait;
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Square {
-    pub hexagon: Vec<Vec<usize>>,
+    pub square: Vec<Vec<usize>>,
     pub size: usize,
 }
 
 impl From<usize> for Square {
     fn from(size: usize) -> Self {
-        let mut hexagon = vec![vec![]; size];
-        for y in 0..size {
+        let mut square = vec![vec![]; size];
+        for row in square.iter_mut().take(size) {
             for x in 0..size {
-                hexagon[y].push(x);
+                row.push(x);
             }
         }
-        Self { hexagon, size }
+        Self { square, size }
     }
 }
 
@@ -29,7 +31,7 @@ impl ShapeTrait for Square {
     }
 
     fn get_local_xy(&self, id: usize) -> Option<(usize, usize)> {
-        for (y, row) in self.hexagon.iter().enumerate() {
+        for (y, row) in self.square.iter().enumerate() {
             for (x, tile) in row.iter().enumerate() {
                 if id == *tile {
                     return Some((x, y));
@@ -59,7 +61,7 @@ impl ShapeTrait for Square {
         (x / 2, y / 2)
     }
 
-    fn rotate(&self, id: usize, owner: &Owner) -> (usize, Option<usize>) {
+    fn rotate_tile(&self, id: usize, owner: &Owner) -> (usize, Option<usize>) {
         match owner {
             Owner::None => unimplemented!(),
             Owner::Own => (id, Some(id)),

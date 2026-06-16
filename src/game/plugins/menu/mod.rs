@@ -1,6 +1,7 @@
 mod exit;
 mod game;
 mod main;
+mod lobby;
 use bevy::prelude::*;
 
 pub struct MenuPlugin;
@@ -11,6 +12,7 @@ impl Plugin for MenuPlugin {
             main::MainMenuPlugin,
             game::GamePlugin,
             exit::ExitMenuPlugin,
+            lobby::LobbyPlugin,
         ));
     }
 }
