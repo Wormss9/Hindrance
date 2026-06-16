@@ -121,7 +121,6 @@ impl ShapeTrait for Hexagon {
                 }
             }
         };
-        println!("  Parent:{:?} x,y :{xp}, {yp}", parent);
         let parent: Option<usize> = parent.map(|(x, y)| self.hexagon[y][x]);
 
         (rotated, parent)

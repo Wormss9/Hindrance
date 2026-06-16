@@ -54,13 +54,7 @@ pub fn server_counters(
         timer.tick(delta);
     }
     state.start_timer.tick(delta);
-    println!(
-        "Server countdown happening {:?}, paused {}!",
-        state.start_timer.duration(),
-        state.start_timer.is_paused()
-    );
     if state.start_timer.just_finished() {
-        println!("Server countdown done!");
         let endpoint = server.endpoint_mut();
         endpoint.try_broadcast_message(ServerMessage::StartGame {
             shape: state.shape.clone(),

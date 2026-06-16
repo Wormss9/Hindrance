@@ -63,8 +63,17 @@ pub fn setup_lobby(
             }
             parent.spawn((
                 Text2d::new(""),
+                TextFont {
+                    font_size: 64.,
+                    font: fonts.jost_semibold.clone(),
+                    ..default()
+                },
                 Countdown {
                     timer: Timer::from_seconds(3., TimerMode::Once),
+                },
+                Transform {
+                    translation: Vec3::new(0., -5. * 64., 0.),
+                    ..default()
                 },
                 Visibility::Hidden,
             ));
