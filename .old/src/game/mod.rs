@@ -9,9 +9,15 @@ pub mod enums;
 pub mod messages;
 pub mod observers;
 pub mod plugins;
-pub mod resources;
+mod resources;
 pub mod states;
-pub mod systems;
+mod systems;
+
+pub use systems as shared1;
+
+pub mod shared2 {
+    pub use self::resources::*;
+}
 
 #[derive(
     States,

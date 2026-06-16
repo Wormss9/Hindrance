@@ -21,7 +21,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ),
         )?;
 
-        // GNU toolchain (x86_64-pc-windows-gnu)
         let status = Command::new("x86_64-w64-mingw32-windres")
             .args([
                 "--target=x86_64-w64-mingw32",
