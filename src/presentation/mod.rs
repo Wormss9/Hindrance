@@ -7,7 +7,7 @@ pub mod state;
 mod systems;
 
 use crate::presentation::{
-    resources::{ButtonMeshes, Colors},
+    resources::{ButtonMeshes, Colors, Fonts},
     screens::main::MainMenuPlugin,
     state::ScreenState,
     systems::{add_camera, set_window_icon},
@@ -21,6 +21,7 @@ impl Plugin for PresentationPlugin {
         app.init_state::<ScreenState>()
             .init_resource::<Colors>()
             .init_resource::<ButtonMeshes>()
+            .init_resource::<Fonts>()
             .add_plugins(MainMenuPlugin)
             .add_systems(Startup, (set_window_icon, add_camera));
     }
