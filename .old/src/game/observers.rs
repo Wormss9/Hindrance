@@ -4,47 +4,7 @@ use super::{Owner, components::*, enums::*, resources::*};
 use bevy::prelude::*;
 use strum::IntoEnumIterator;
 
-pub trait PointerInteraction {
-    fn with_pointer_interaction(&mut self) -> &mut Self;
-}
 
-impl<'w> PointerInteraction for EntityCommands<'w> {
-    fn with_pointer_interaction(&mut self) -> &mut Self {
-        self.observe(
-            move |event: On<Pointer<Over>>, mut query: Query<&mut Pointable, With<Tile>>| {
-                let entity = event.event_target();
-                if let Ok(mut pointable) = query.get_mut(entity) {
-                    pointable.over = true;
-                };
-            },
-        )
-        .observe(
-            move |event: On<Pointer<Out>>, mut query: Query<&mut Pointable, With<Tile>>| {
-                let entity = event.event_target();
-                if let Ok(mut pointable) = query.get_mut(entity) {
-                    pointable.over = false;
-                };
-            },
-        )
-        .observe(
-            move |event: On<Pointer<Press>>, mut query: Query<&mut Pointable, With<Tile>>| {
-                let entity = event.event_target();
-                if let Ok(mut pointable) = query.get_mut(entity) {
-                    pointable.press = true;
-                };
-            },
-        )
-        .observe(
-            move |event: On<Pointer<Release>>, mut query: Query<&mut Pointable, With<Tile>>| {
-                let entity = event.event_target();
-                if let Ok(mut pointable) = query.get_mut(entity) {
-                    pointable.press = false;
-                };
-            },
-        );
-        self
-    }
-}
 
 #[allow(clippy::type_complexity)]
 pub fn move_own(

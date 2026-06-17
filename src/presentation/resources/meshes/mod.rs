@@ -3,7 +3,7 @@ mod primitives;
 use bevy::{mesh::Mesh, prelude::*};
 use primitives::*;
 
-const BUTTON_SIZE: f32 = 60.;
+const BUTTON_SIZE: f32 = 32.;
 
 pub enum ButtonShape {
     Square,
