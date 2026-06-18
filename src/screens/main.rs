@@ -1,4 +1,4 @@
-use crate::presentation::{bundles::*, components::*, observers::*, resources::*, state::*};
+use crate::{bundles::*, components::*, observers::*, resources::*, state::*};
 use bevy::prelude::*;
 
 pub struct MainMenuPlugin;

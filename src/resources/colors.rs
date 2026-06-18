@@ -1,4 +1,4 @@
-use crate::presentation::components::ColorId;
+use crate::components::ColorId;
 use bevy::prelude::*;
 use std::collections::HashMap;
 

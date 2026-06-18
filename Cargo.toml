@@ -1,19 +1,31 @@
 [package]
 name = "Hindrance"
+build = "build.rs"
+version.workspace = true
+edition.workspace = true
+
+[workspace]
+members = ["logic", "networking"]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
-build = "build.rs"
+
+
+[workspace.dependencies]
+bevy = { version = "0.18", default-features = false, features = ["2d"] }
+bevy_quinnet = { version = "0.20", features = ["bincode-messages"] }
+bevy-steamworks = { version = "0.16" }
+
 
 [dependencies]
-bevy = { version = "0.18.x", default-features = false, features = ["2d"] }
-bevy_quinnet = { version = "0.20.0", features = ["bincode-messages"] }
-bevy-steamworks = "0.16.x"
-enum_dispatch = "0.3.13"
-image = "0.25.x"
-log = { version = "*", features = ["max_level_debug", "release_max_level_off"] }
-serde = "*"
-strum = { version = "0.28.x", features = ["derive"] }
+bevy = { workspace = true }
+bevy-steamworks = { workspace = true }
+image = "*"
+logic = { path = "logic" }
+networking = { path = "networking" }
 winit = "*"
+log = { version = "*", features = ["max_level_debug", "release_max_level_off"] }
 
 [features]
 default = ["debug"]
