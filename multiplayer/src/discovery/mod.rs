@@ -24,11 +24,11 @@ pub struct DiscoveryPlugin;
 impl Plugin for DiscoveryPlugin {
     fn build(&self, app: &mut App) {
         app.init_state::<LobbyState>()
-            .add_systems(OnEnter(LobbyState::Hosting), insert_lobby_discovery)
+            .add_systems(OnEnter(LobbyState::Hosting), insert_lobby_broadcast)
             .add_systems(
                 Update,
                 broadcast_lobby
-                    .after(insert_lobby_discovery)
+                    .after(insert_lobby_broadcast)
                     .run_if(in_state(LobbyState::Hosting))
                     .run_if(on_timer(Duration::from_secs(1))),
             )
@@ -41,7 +41,7 @@ impl Plugin for DiscoveryPlugin {
             )
             .add_systems(
                 OnExit(LobbyState::Hosting),
-                (remove_lobby_discovery, remove_lobby),
+                (remove_lobby_broadcast, remove_lobby),
             )
             .add_systems(OnExit(LobbyState::Joining), remove_lobby_discovery);
     }

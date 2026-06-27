@@ -17,13 +17,25 @@ pub(crate) fn remove_lobby_discovery(mut commands: Commands) {
     commands.remove_resource::<DiscoveredLobbies>();
 }
 
+pub(crate) fn insert_lobby_broadcast(mut commands: Commands) {
+    let discovery = LanBroadcast::new(DISCOVERY_PORT);
+    commands.insert_resource(LobbyBroadcast {
+        broadcast: discovery,
+    });
+    commands.init_resource::<DiscoveredLobbies>();
+}
+
+pub(crate) fn remove_lobby_broadcast(mut commands: Commands) {
+    commands.remove_resource::<LobbyBroadcast>();
+}
+
 pub(crate) fn remove_lobby(mut commands: Commands) {
     commands.remove_resource::<HostedLobby>();
 }
 
-pub(crate) fn broadcast_lobby(mut discovery: ResMut<LobbyDiscovery>, lobby: Res<HostedLobby>) {
+pub(crate) fn broadcast_lobby(mut discovery: ResMut<LobbyBroadcast>, lobby: Res<HostedLobby>) {
     discovery
-        .discovery
+        .broadcast
         .broadcast(BroadcastLobby::from(lobby.as_ref()));
 }
 

@@ -7,9 +7,7 @@ use std::{
 
 pub struct LanDiscovery {
     socket: UdpSocket,
-    port: u16,
-    addresses: Option<Vec<IpAddr>>,
-    buf: [u8; 65_535],
+    buf: [u8; 4],
 }
 
 impl LanDiscovery {
@@ -20,9 +18,47 @@ impl LanDiscovery {
         socket.set_broadcast(true).expect("Failed to set broadcast");
         Self {
             socket,
+            buf: [0; 4],
+        }
+    }
+    pub fn try_receive<M>(&mut self) -> Option<(IpAddr, M)>
+    where
+        M: DecodeOwned,
+    {
+        loop {
+            match self.socket.recv_from(&mut self.buf) {
+                Ok((len, src)) => match bitcode::decode::<M>(&self.buf[..len]) {
+                    Ok(message) => return Some((src.ip(), message)),
+                    Err(err) => {
+                        eprintln!("Invalid UDP message from {src}: {err}");
+                    }
+                },
+
+                Err(err) if err.kind() == ErrorKind::WouldBlock => return None,
+
+                Err(err) => {
+                    eprintln!("UDP receive error: {err}");
+                }
+            }
+        }
+    }
+}
+pub struct LanBroadcast {
+    socket: UdpSocket,
+    port: u16,
+    addresses: Option<Vec<IpAddr>>,
+}
+
+impl LanBroadcast {
+    pub fn new(port: u16) -> Self {
+        let socket_address = SocketAddr::new(Ipv4Addr::UNSPECIFIED.into(), 0);
+        let socket = UdpSocket::bind(socket_address).expect("Failed to bind");
+        socket.set_nonblocking(true).expect("Failed to not block");
+        socket.set_broadcast(true).expect("Failed to set broadcast");
+        Self {
+            socket,
             port,
             addresses: None,
-            buf: [0; 65_535],
         }
     }
     pub fn broadcast<M>(&mut self, message: M)
@@ -45,27 +81,6 @@ impl LanDiscovery {
         for &broadcast in self.addresses.as_ref().unwrap() {
             if let Err(err) = self.socket.send_to(&bytes, (broadcast, self.port)) {
                 eprintln!("Broadcast to {broadcast} failed: {err}");
-            }
-        }
-    }
-    pub fn try_receive<M>(&mut self) -> Option<(IpAddr, M)>
-    where
-        M: DecodeOwned,
-    {
-        loop {
-            match self.socket.recv_from(&mut self.buf) {
-                Ok((len, src)) => match bitcode::decode::<M>(&self.buf[..len]) {
-                    Ok(message) => return Some((src.ip(), message)),
-                    Err(err) => {
-                        eprintln!("Invalid UDP message from {src}: {err}");
-                    }
-                },
-
-                Err(err) if err.kind() == ErrorKind::WouldBlock => return None,
-
-                Err(err) => {
-                    eprintln!("UDP receive error: {err}");
-                }
             }
         }
     }

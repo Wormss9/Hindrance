@@ -13,6 +13,11 @@ pub struct LobbyDiscovery {
     pub discovery: LanDiscovery,
 }
 
+#[derive(Resource)]
+pub struct LobbyBroadcast {
+    pub broadcast: LanBroadcast,
+}
+
 #[derive(Encode, Decode, Clone)]
 pub struct BroadcastLobby {
     pub shape: Shape,
