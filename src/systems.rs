@@ -10,7 +10,7 @@ use winit::window::Icon;
 
 pub fn set_window_icon(_marker: NonSendMarker) {
     WINIT_WINDOWS.with_borrow(|winit_windows| {
-        if winit_windows.windows.len() == 0 {
+        if winit_windows.windows.is_empty() {
             return;
         }
 

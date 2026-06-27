@@ -5,5 +5,6 @@ pub enum ScreenState {
     #[default]
     MainMenu,
     InLobby,
+    BrowsingLobbies,
     InGame,
 }

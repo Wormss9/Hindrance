@@ -1,12 +1,13 @@
 use crate::{bundles::*, components::*, observers::*, resources::*, state::*};
 use bevy::prelude::*;
+use gameplay::rules::Shape;
+use multiplayer::discovery::{LobbyState, create_lobby};
 
 pub struct MainMenuPlugin;
 
 impl Plugin for MainMenuPlugin {
     fn build(&self, app: &mut App) {
-        app.init_state::<ScreenState>()
-            .add_systems(OnEnter(ScreenState::MainMenu), setup_main_menu)
+        app.add_systems(OnEnter(ScreenState::MainMenu), setup_main_menu)
             .add_systems(OnExit(ScreenState::MainMenu), cleanup_main_menu);
     }
 }
@@ -30,17 +31,17 @@ pub fn setup_main_menu(mut commands: Commands, meshes: Res<ButtonMeshes>, colors
                     &colors,
                     &meshes,
                 ))
-                .with_button_interaction();
-            // .observe(
-            //     |_: On<Pointer<Release>>,
-            //      mut hosting_state: ResMut<NextState<HostingState>>,
-            //      mut game_state: ResMut<NextState<GameState>>,
-            //      mut commands: Commands| {
-            //         commands.insert_resource(ServerState::new(Board::new_square()));
-            //         hosting_state.set(HostingState::Hosting);
-            //         game_state.set(GameState::InLobby);
-            //     },
-            // );
+                .with_button_interaction()
+                .observe(
+                    |_: On<Pointer<Release>>,
+                     mut screen_state: ResMut<NextState<ScreenState>>,
+                     mut lobby_state: ResMut<NextState<LobbyState>>,
+                     commands: Commands| {
+                        create_lobby(commands, Shape::Square);
+                        screen_state.set(ScreenState::InLobby);
+                        lobby_state.set(LobbyState::Hosting);
+                    },
+                );
             parent
                 .spawn(ButtonBundle::new(
                     ButtonShape::Triangle,
@@ -51,17 +52,17 @@ pub fn setup_main_menu(mut commands: Commands, meshes: Res<ButtonMeshes>, colors
                     &colors,
                     &meshes,
                 ))
-                .with_button_interaction();
-            // .observe(
-            //     |_: On<Pointer<Release>>,
-            //      mut hosting_state: ResMut<NextState<HostingState>>,
-            //      mut game_state: ResMut<NextState<GameState>>,
-            //      mut commands: Commands| {
-            //         commands.insert_resource(ServerState::new(Board::new_triangle()));
-            //         hosting_state.set(HostingState::Hosting);
-            //         game_state.set(GameState::InLobby);
-            //     },
-            // );
+                .with_button_interaction()
+                .observe(
+                    |_: On<Pointer<Release>>,
+                     mut screen_state: ResMut<NextState<ScreenState>>,
+                     mut lobby_state: ResMut<NextState<LobbyState>>,
+                     commands: Commands| {
+                        create_lobby(commands, Shape::Hexagon);
+                        screen_state.set(ScreenState::InLobby);
+                        lobby_state.set(LobbyState::Hosting);
+                    },
+                );
             parent
                 .spawn(ButtonBundle::new(
                     ButtonShape::Arrow,
@@ -72,17 +73,16 @@ pub fn setup_main_menu(mut commands: Commands, meshes: Res<ButtonMeshes>, colors
                     &colors,
                     &meshes,
                 ))
-                .with_button_interaction();
-            // .observe(
-            //     |_: On<Pointer<Release>>,
-            //      mut hosting_state: ResMut<NextState<HostingState>>,
-            //      mut game_state: ResMut<NextState<GameState>>,
-            //      mut commands: Commands| {
-            //         commands.insert_resource(Board::new_square());
-            //         hosting_state.set(HostingState::Joining);
-            //         game_state.set(GameState::InLobby);
-            //     },
-            // );
+                .with_button_interaction()
+                .observe(
+                    |_: On<Pointer<Release>>,
+                     //  mut hosting_state: ResMut<NextState<HostingState>>,
+                     mut screen_state: ResMut<NextState<ScreenState>>,
+                     mut lobby_state: ResMut<NextState<LobbyState>>| {
+                        screen_state.set(ScreenState::BrowsingLobbies);
+                        lobby_state.set(LobbyState::Joining);
+                    },
+                );
             parent
                 .spawn(ButtonBundle::new(
                     ButtonShape::Cross,

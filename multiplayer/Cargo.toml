@@ -1,0 +1,11 @@
+[package]
+name = "multiplayer"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bevy = { workspace = true }
+bitcode = { workspace = true }
+gameplay = { workspace = true }
+networking = { workspace = true }
+serde = "*"

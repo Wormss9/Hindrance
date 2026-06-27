@@ -13,7 +13,7 @@ pub enum ButtonShape {
 }
 
 impl ButtonShape {
-    pub fn into_mesh(&self, meshes: &ButtonMeshes) -> Handle<Mesh> {
+    pub fn into_mesh(self, meshes: &ButtonMeshes) -> Handle<Mesh> {
         use ButtonShape::*;
         match self {
             Square => &meshes.square,

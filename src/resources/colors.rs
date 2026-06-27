@@ -7,6 +7,7 @@ pub struct Colors {
     pub materials: HashMap<(ColorId, Variant), Handle<ColorMaterial>>,
 }
 
+#[allow(clippy::approx_constant)]
 impl FromWorld for Colors {
     fn from_world(world: &mut World) -> Self {
         use ColorId::*;
@@ -73,11 +74,11 @@ fn insert_trio(
 ) {
     use Variant::*;
     materials.insert(
-        (color_id.clone(), Normal),
+        (color_id, Normal),
         assets.add(color.with_luminance(luminance)),
     );
     materials.insert(
-        (color_id.clone(), Light),
+        (color_id, Light),
         assets.add(color.with_luminance(luminance * 1.5)),
     );
     materials.insert(
