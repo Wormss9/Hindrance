@@ -1,4 +1,4 @@
-use bevy::{platform::collections::HashSet, prelude::*};
+use bevy::{asset::uuid::Uuid, platform::collections::HashSet, prelude::*};
 use bitcode::{Decode, Encode};
 use gameplay::rules::Shape;
 use networking::broadcast::*;
@@ -20,6 +20,7 @@ pub struct LobbyBroadcast {
 
 #[derive(Encode, Decode, Clone)]
 pub struct BroadcastLobby {
+    pub uuid: [u8; 16],
     pub shape: Shape,
     pub players: u8,
     pub max_players: u8,
@@ -27,6 +28,7 @@ pub struct BroadcastLobby {
 
 #[derive(Resource)]
 pub struct HostedLobby {
+    pub uuid: Uuid,
     pub shape: Shape,
     pub players: u8,
     pub max_players: u8,
@@ -41,7 +43,7 @@ pub struct DiscoveredLobby {
 
 impl PartialEq for DiscoveredLobby {
     fn eq(&self, other: &Self) -> bool {
-        self.address == other.address
+        self.lobby.uuid == other.lobby.uuid
     }
 }
 
@@ -49,7 +51,7 @@ impl Eq for DiscoveredLobby {}
 
 impl Hash for DiscoveredLobby {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.address.hash(state);
+        self.lobby.uuid.hash(state);
     }
 }
 
@@ -73,11 +75,13 @@ pub struct DiscoveredLobbies {
 impl From<&HostedLobby> for BroadcastLobby {
     fn from(value: &HostedLobby) -> Self {
         let &HostedLobby {
+            uuid,
             shape,
             players,
             max_players,
         } = value;
         Self {
+            uuid:*uuid.as_bytes(),
             shape,
             players,
             max_players,
@@ -88,6 +92,7 @@ impl From<&HostedLobby> for BroadcastLobby {
 impl HostedLobby {
     pub(crate) fn new(shape: Shape) -> Self {
         Self {
+            uuid: Uuid::new_v4(),
             shape,
             players: 0,
             max_players: shape.max_players(),

@@ -7,7 +7,7 @@ use std::{
 
 pub struct LanDiscovery {
     socket: UdpSocket,
-    buf: [u8; 4],
+    buf: [u8; 32],
 }
 
 impl LanDiscovery {
@@ -18,7 +18,7 @@ impl LanDiscovery {
         socket.set_broadcast(true).expect("Failed to set broadcast");
         Self {
             socket,
-            buf: [0; 4],
+            buf: Default::default(),
         }
     }
     pub fn try_receive<M>(&mut self) -> Option<(IpAddr, M)>

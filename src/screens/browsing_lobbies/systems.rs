@@ -116,6 +116,7 @@ fn update_row(
     let (mut join, mut join_color) = lobby_buttons.get_mut(*join_button).unwrap();
 
     let BroadcastLobby {
+        uuid: _,
         shape,
         players,
         max_players,
@@ -137,7 +138,6 @@ fn update_row(
     *join_color = mesh_color;
 }
 
-
 #[allow(clippy::too_many_arguments)]
 fn create_row(
     index: usize,
@@ -155,6 +155,7 @@ fn create_row(
         last_seen: _,
     } = lobby;
     let BroadcastLobby {
+        uuid: _,
         shape,
         players,
         max_players,
