@@ -46,7 +46,7 @@ pub fn add_camera(mut commands: Commands) {
             },
             ..OrthographicProjection::default_2d()
         }),
-        Tonemapping::None,
+        Tonemapping::ReinhardLuminance,
         Bloom {
             intensity: 0.25,
             ..Default::default()
