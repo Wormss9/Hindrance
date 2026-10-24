@@ -8,7 +8,7 @@ pub trait ButtonInteraction {
 impl<'w> ButtonInteraction for EntityCommands<'w> {
     fn with_button_interaction(&mut self) -> &mut Self {
         self.observe(
-            move |event: On<Pointer<Over>>,
+            move |event: On<PointerOver>,
                   mut self_query: Query<(&mut MeshMaterial2d<ColorMaterial>, &ColorId)>,
                   colors: Res<Colors>| {
                 let entity = event.event_target();
@@ -22,7 +22,7 @@ impl<'w> ButtonInteraction for EntityCommands<'w> {
             },
         )
         .observe(
-            move |event: On<Pointer<Out>>,
+            move |event: On<PointerOut>,
                   mut self_query: Query<(&mut MeshMaterial2d<ColorMaterial>, &ColorId)>,
                   colors: Res<Colors>| {
                 let entity = event.event_target();
@@ -36,7 +36,7 @@ impl<'w> ButtonInteraction for EntityCommands<'w> {
             },
         )
         .observe(
-            move |event: On<Pointer<Press>>,
+            move |event: On<PointerPress>,
                   mut self_query: Query<(&mut MeshMaterial2d<ColorMaterial>, &ColorId)>,
                   colors: Res<Colors>| {
                 let entity = event.event_target();

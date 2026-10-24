@@ -33,7 +33,7 @@ pub fn setup_main_menu(mut commands: Commands, meshes: Res<ButtonMeshes>, colors
                 ))
                 .with_button_interaction()
                 .observe(
-                    |_: On<Pointer<Release>>,
+                    |_: On<PointerRelease>,
                      mut screen_state: ResMut<NextState<ScreenState>>,
                      mut lobby_state: ResMut<NextState<LobbyState>>,
                      commands: Commands| {
@@ -54,7 +54,7 @@ pub fn setup_main_menu(mut commands: Commands, meshes: Res<ButtonMeshes>, colors
                 ))
                 .with_button_interaction()
                 .observe(
-                    |_: On<Pointer<Release>>,
+                    |_: On<PointerRelease>,
                      mut screen_state: ResMut<NextState<ScreenState>>,
                      mut lobby_state: ResMut<NextState<LobbyState>>,
                      commands: Commands| {
@@ -75,7 +75,7 @@ pub fn setup_main_menu(mut commands: Commands, meshes: Res<ButtonMeshes>, colors
                 ))
                 .with_button_interaction()
                 .observe(
-                    |_: On<Pointer<Release>>,
+                    |_: On<PointerRelease>,
                      //  mut hosting_state: ResMut<NextState<HostingState>>,
                      mut screen_state: ResMut<NextState<ScreenState>>,
                      mut lobby_state: ResMut<NextState<LobbyState>>| {
@@ -95,7 +95,7 @@ pub fn setup_main_menu(mut commands: Commands, meshes: Res<ButtonMeshes>, colors
                 ))
                 .with_button_interaction()
                 .observe(
-                    |_: On<Pointer<Release>>, mut exit: MessageWriter<AppExit>| {
+                    |_: On<PointerRelease>, mut exit: MessageWriter<AppExit>| {
                         exit.write(AppExit::Success);
                     },
                 );

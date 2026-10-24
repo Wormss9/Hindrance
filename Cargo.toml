@@ -18,7 +18,7 @@ edition = "2024"
 
 
 [workspace.dependencies]
-bevy = { version = "0.19", default-features = false, features = ["2d"] }
+bevy = { version = "0.20", default-features = false, features = ["2d"] }
 steamworks = "0.13"
 bitcode = "0.6"
 gameplay = { path = "gameplay" }

@@ -203,7 +203,7 @@ fn create_row(
             LobbyJoin { ip: *address },
         ))
         .with_button_interaction()
-        .observe(|event: On<Pointer<Release>>, joins: Query<&LobbyJoin>| {
+        .observe(|event: On<PointerRelease>, joins: Query<&LobbyJoin>| {
             println!(
                 "Connecting to: {}:7777",
                 joins.get(event.entity).unwrap().ip
